@@ -74,7 +74,17 @@ export class NoteService {
     return updated;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} note`;
+  async remove(id: number, userId: number) {
+    const note = await this.prismaService.note.findFirst({ where: { id } });
+
+    if (!note) throw new NotFoundException('Note not Found');
+
+    if (note?.userId !== userId) {
+      throw new ForbiddenException('Not Allowed!');
+    }
+
+    await this.prismaService.note.delete({ where: { id, userId } });
+
+    return `Delete successful`;
   }
 }
