@@ -32,6 +32,7 @@ type WorkspaceState = {
   refreshList: () => Promise<void>
   createNote: () => Promise<void>
   saveNow: () => Promise<void>
+  moveToFolder: (folderId: number) => Promise<void>
 }
 
 function useDebouncedEffect(effect: () => void, ms: number, deps: React.DependencyList) {
@@ -176,6 +177,24 @@ export function useNotesWorkspace(): WorkspaceState {
     }
   }, [draftMarkdown, draftTitle, selectedId])
 
+  const moveToFolder = React.useCallback(
+    async (folderId: number) => {
+      if (!selectedId) return
+      setNotesError(null)
+      try {
+        await apiFetch<unknown>(`/api/v1/notes/${selectedId}/folder`, {
+          method: "PATCH",
+          body: JSON.stringify({ folderId }),
+        })
+        // if moved out of the current folder filter, refresh list to reflect it
+        await refreshList()
+      } catch (err) {
+        setNotesError(err instanceof Error ? err.message : "Failed to move note")
+      }
+    },
+    [refreshList, selectedId]
+  )
+
   const lastSavedRef = React.useRef<{ id: number; title: string; markdown: string } | null>(null)
   React.useEffect(() => {
     if (!selectedId) return
@@ -221,6 +240,7 @@ export function useNotesWorkspace(): WorkspaceState {
     refreshList,
     createNote,
     saveNow,
+    moveToFolder,
   }
 }
 

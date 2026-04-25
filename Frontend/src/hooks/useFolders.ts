@@ -19,7 +19,7 @@ type FoldersState = {
   selectedFolderId: number | null
   selectFolder: (id: number) => void
   refresh: () => Promise<void>
-  create: (args: { name: string; parentId?: number | null }) => Promise<void>
+  create: (args: { name: string }) => Promise<void>
   rename: (args: { id: number; name: string }) => Promise<void>
 }
 
@@ -77,12 +77,12 @@ export function useFolders(): FoldersState {
   )
 
   const create = React.useCallback(
-    async (args: { name: string; parentId?: number | null }) => {
+    async (args: { name: string }) => {
       setError(null)
       try {
         await apiFetch<unknown>("/api/v1/folders", {
           method: "POST",
-          body: JSON.stringify({ name: args.name, parentId: args.parentId ?? null }),
+          body: JSON.stringify({ name: args.name, parentId: null }),
         })
         await refresh()
       } catch (err) {

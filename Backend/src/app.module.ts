@@ -8,6 +8,7 @@ import { NoteModule } from './note/note.module';
 import { TagModule } from './tag/tag.module';
 import { FolderModule } from './folder/folder.module';
 import { AiModule } from './ai/ai.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AiModule } from './ai/ai.module';
     TagModule,
     FolderModule,
     AiModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

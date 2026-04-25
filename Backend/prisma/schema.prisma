@@ -13,11 +13,23 @@ model User {
   name      String?
   email     String  @unique
   password  String
+  emailVerified Boolean @default(false)
+  refreshTokenHash String?
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
   notes     Note[]
   tags      Tag[]
   folders   Folder[]
+}
+
+model EmailOtp {
+  id        Int      @id @default(autoincrement())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, expiresAt])
 }
 
 enum NoteContentType {

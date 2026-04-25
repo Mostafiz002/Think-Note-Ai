@@ -36,6 +36,7 @@ export async function apiFetch<T>(
   path: string,
   init?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> }
 ): Promise<T> {
+  const attempt = async (retrying: boolean): Promise<T> => {
   const headers: Record<string, string> = { ...(init?.headers ?? {}) }
   if (init?.body && !headers["content-type"]) {
     headers["content-type"] = "application/json"
@@ -47,6 +48,12 @@ export async function apiFetch<T>(
   })
 
   const data = await parseJsonSafely(res)
+  if (res.status === 401 && !retrying && !path.startsWith("/api/auth/")) {
+    const refreshed = await fetch("/api/auth/refresh-token", { method: "POST" })
+    if (refreshed.ok) {
+      return attempt(true)
+    }
+  }
   if (!res.ok) {
     const msg = errorMessageFromData(data)
     throw new ApiError(msg ? `API ${res.status}: ${msg}` : `API request failed (${res.status})`, {
@@ -55,5 +62,8 @@ export async function apiFetch<T>(
     })
   }
   return data as T
+  }
+
+  return attempt(false)
 }
 

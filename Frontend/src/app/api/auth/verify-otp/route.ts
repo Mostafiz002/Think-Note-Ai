@@ -5,9 +5,9 @@ import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from "@/lib/auth"
 import { env } from "@/lib/env"
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { email?: string; password?: string }
+  const body = (await req.json()) as { email?: string; otp?: string }
 
-  const upstream = await fetch(`${env.backendUrl}/api/auth/login`, {
+  const upstream = await fetch(`${env.backendUrl}/api/auth/verify-otp`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -20,10 +20,7 @@ export async function POST(req: Request) {
 
   const tokens = payload as { access_token?: string; refresh_token?: string }
   if (!tokens.access_token || !tokens.refresh_token) {
-    return NextResponse.json(
-      { message: "Login response missing tokens" },
-      { status: 502 }
-    )
+    return NextResponse.json({ message: "Verify response missing tokens" }, { status: 502 })
   }
 
   const jar = await cookies()
@@ -38,7 +35,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-   })
+  })
 
   return NextResponse.json({ ok: true })
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useAiPanel } from "@/hooks/useAiPanel"
+import { useFolderRootsList } from "@/hooks/useFolderRootsList"
 import { useNotesWorkspace } from "@/hooks/useNotesWorkspace"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +15,7 @@ export function Workspace() {
   const ws = useNotesWorkspace()
   const ai = useAiPanel()
   const [instruction, setInstruction] = React.useState("")
+  const folderRoots = useFolderRootsList()
 
   return (
     <div className="relative flex flex-1">
@@ -104,6 +106,25 @@ export function Workspace() {
                 ) : (
                   <div className="font-mono text-xs text-muted-foreground">Autosave</div>
                 )}
+                <label className="hidden items-center gap-2 rounded-lg border bg-background/30 px-2 py-1 text-xs text-muted-foreground md:flex">
+                  <span className="font-mono">Folder</span>
+                  <select
+                    className="cursor-pointer bg-transparent text-xs text-foreground outline-none"
+                    value={ws.active?.folderId ?? ""}
+                    onChange={(e) => {
+                      const nextId = Number(e.target.value)
+                      if (!Number.isFinite(nextId)) return
+                      void ws.moveToFolder(nextId)
+                    }}
+                    disabled={!ws.selectedId || ws.activeLoading}
+                  >
+                    {folderRoots.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -241,9 +262,6 @@ export function Workspace() {
                     placeholder="Write in Markdown…"
                     className="min-h-[60dvh] resize-none bg-background/60 font-sans"
                   />
-                  <div className="rounded-xl border bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
-                    Markdown editor (preview + AI tools next).
-                  </div>
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">Select or create a note.</div>

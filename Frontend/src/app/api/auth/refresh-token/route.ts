@@ -4,13 +4,17 @@ import { NextResponse } from "next/server"
 import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from "@/lib/auth"
 import { env } from "@/lib/env"
 
-export async function POST(req: Request) {
-  const body = (await req.json()) as { email?: string; password?: string }
+export async function POST() {
+  const jar = await cookies()
+  const refresh = jar.get(REFRESH_COOKIE_NAME)?.value
+  if (!refresh) {
+    return NextResponse.json({ message: "Missing refresh token" }, { status: 401 })
+  }
 
-  const upstream = await fetch(`${env.backendUrl}/api/auth/login`, {
+  const upstream = await fetch(`${env.backendUrl}/api/auth/refresh-token`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ refresh_token: refresh }),
   })
 
   const payload = (await upstream.json()) as unknown
@@ -20,13 +24,9 @@ export async function POST(req: Request) {
 
   const tokens = payload as { access_token?: string; refresh_token?: string }
   if (!tokens.access_token || !tokens.refresh_token) {
-    return NextResponse.json(
-      { message: "Login response missing tokens" },
-      { status: 502 }
-    )
+    return NextResponse.json({ message: "Refresh response missing tokens" }, { status: 502 })
   }
 
-  const jar = await cookies()
   jar.set(AUTH_COOKIE_NAME, tokens.access_token, {
     httpOnly: true,
     sameSite: "lax",
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-   })
+  })
 
   return NextResponse.json({ ok: true })
 }

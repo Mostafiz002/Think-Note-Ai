@@ -1,4 +1,7 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
+### follow notion like design color
+
 📂 Architectural Rules
 Modular Organization: Maintain a strict separation of concerns.
 

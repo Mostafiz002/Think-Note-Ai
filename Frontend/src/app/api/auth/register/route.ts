@@ -1,7 +1,5 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { AUTH_COOKIE_NAME } from "@/lib/auth"
 import { env } from "@/lib/env"
 
 export async function POST(req: Request) {
@@ -22,22 +20,6 @@ export async function POST(req: Request) {
     return NextResponse.json(payload, { status: upstream.status })
   }
 
-  const token = (payload as { access_token?: string }).access_token
-  if (!token) {
-    return NextResponse.json(
-      { message: "Register response missing access_token" },
-      { status: 502 }
-    )
-  }
-
-  const jar = await cookies()
-  jar.set(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  })
-
-  return NextResponse.json({ ok: true })
+  return NextResponse.json(payload)
 }
 

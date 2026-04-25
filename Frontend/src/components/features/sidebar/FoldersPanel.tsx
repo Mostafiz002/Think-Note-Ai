@@ -23,8 +23,7 @@ function renderTree(args: {
   return args.nodes.map((f) => (
     <div key={f.id}>
       <div
-          role="button"
-          tabIndex={0}
+        role="button"
         onClick={() => args.onSelect(f.id)}
         className={cn(
           "group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/40",
@@ -83,15 +82,6 @@ function renderTree(args: {
           </>
         )}
       </div>
-      {f.children?.length ? (
-        <div>
-          {renderTree({
-            ...args,
-            nodes: f.children,
-            depth: depth + 1,
-          })}
-        </div>
-      ) : null}
     </div>
   ))
 }
@@ -130,13 +120,6 @@ export function FoldersPanel() {
     setName("")
   }, [folders, name])
 
-  const createSub = React.useCallback(() => {
-    const v = name.trim()
-    if (!v || !folders.selectedFolderId) return
-    void folders.create({ name: v, parentId: folders.selectedFolderId })
-    setName("")
-  }, [folders, name])
-
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -155,17 +138,6 @@ export function FoldersPanel() {
           >
             <FolderPlus className="size-4" />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="cursor-pointer"
-            onClick={createSub}
-            aria-label="Create subfolder"
-            disabled={folders.loading || !name.trim() || !folders.selectedFolderId}
-          >
-            <FolderIcon className="size-4" />
-          </Button>
         </div>
       </div>
 
@@ -173,13 +145,12 @@ export function FoldersPanel() {
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={folders.selectedFolderId ? "New folder or subfolder…" : "New folder…"}
+          placeholder="New folder…"
           className="h-8"
           onKeyDown={(e) => {
             if (e.key !== "Enter") return
             e.preventDefault()
-            if (folders.selectedFolderId) createSub()
-            else createRoot()
+            createRoot()
           }}
         />
       </div>
@@ -199,7 +170,7 @@ export function FoldersPanel() {
         ) : folders.folders.length ? (
           <div className="grid gap-0.5">
             {renderTree({
-              nodes: folders.folders,
+              nodes: folders.folders.filter((f) => f.parentId == null),
               selectedId: folders.selectedFolderId,
               onSelect: folders.selectFolder,
               renamingId,
