@@ -128,3 +128,11 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .ai-glow {
+    box-shadow:
+      0 0 0 1px hsl(var(--ring) / 0.18),
+      0 0 18px hsl(var(--sidebar-primary) / 0.25);
+  }
+}
