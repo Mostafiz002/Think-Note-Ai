@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
 import bcrypt from 'bcrypt';
@@ -40,6 +41,13 @@ export class AuthService {
     const newUser = await this.userService.createUser({
       ...registerDto,
       password: hashedPassword,
+    });
+
+    await this.prismaService.folder.create({
+      data: {
+        name: 'General',
+        userId: newUser.id,
+      },
     });
 
     this.logger.log(`New user has been created: ${newUser.id}`);
@@ -101,6 +109,31 @@ export class AuthService {
     await this.prismaService.emailOtp.deleteMany({ where: { email: verifyOtpDto.email } });
 
     return await this.issueTokens(user.id, user.name ?? '');
+  }
+
+  async resendOtp(email: string) {
+    const user = await this.userService.getUserByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.emailVerified) {
+      throw new ConflictException('Email is already verified');
+    }
+
+    const saltRound = 10;
+    const otp = this.generateOtp();
+    const codeHash = await bcrypt.hash(otp, saltRound);
+    await this.prismaService.emailOtp.create({
+      data: {
+        email: user.email,
+        codeHash,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    await this.mailService.sendOtpEmail({ to: user.email, otp });
+
+    return { ok: true };
   }
 
   async refreshToken(refreshTokenDto: RefreshTokenDto) {

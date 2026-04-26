@@ -41,18 +41,6 @@ export function useFolders(): FoldersState {
     setLoading(true)
     try {
       const data = await apiFetch<Folder[]>("/api/v1/folders", { cache: "no-store" })
-      if (data.length === 0) {
-        await apiFetch<unknown>("/api/v1/folders", {
-          method: "POST",
-          body: JSON.stringify({ name: "General", parentId: null }),
-        })
-        const again = await apiFetch<Folder[]>("/api/v1/folders", { cache: "no-store" })
-        setFolders(again)
-        const firstId = findFirstFolderId(again)
-        if (firstId) setSelectedFolderId(firstId)
-        return
-      }
-
       setFolders(data)
       if (!selectedFolderId) {
         const firstId = findFirstFolderId(data)

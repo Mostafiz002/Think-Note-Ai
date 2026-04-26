@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { FilePlus2, Loader2, PencilLine, Sparkles, Save, Search, Wand2 } from "lucide-react"
+import { FilePlus2, Loader2, PencilLine, Sparkles, Save, Search, Wand2, ChevronLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ export function Workspace() {
       <div className="pointer-events-none absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_1px_1px,hsl(var(--foreground))_1px,transparent_0)] bg-size-[22px_22px]" />
 
       <div className="relative mx-auto flex w-full max-w-6xl flex-1 gap-4 px-4 py-4">
-        <section className="flex w-full flex-col gap-3 md:w-80">
+        <section className={cn("w-full flex-col gap-3 md:w-80", ws.selectedId ? "hidden md:flex" : "flex")}>
           <div className="rounded-2xl border bg-background/40 p-3 backdrop-blur-xl">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -81,23 +81,26 @@ export function Workspace() {
           </div>
         </section>
 
-        <section className="hidden flex-1 md:flex">
+        <section className={cn("flex-1", ws.selectedId ? "flex" : "hidden md:flex")}>
           <div className="flex w-full flex-col overflow-hidden rounded-2xl border bg-background/40 backdrop-blur-xl">
             <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
               <div className="min-w-0 flex-1">
-                <div className="group relative">
+                <div className="group flex items-center">
+                  <span className="opacity-60 transition-opacity group-hover:opacity-100 mr-2 shrink-0">
+                    <PencilLine className="size-4 text-muted-foreground" />
+                  </span>
                   <Input
                     value={ws.draftTitle}
                     onChange={(e) => ws.setDraftTitle(e.target.value)}
                     placeholder="Untitled"
-                    className="h-9 border-transparent bg-transparent px-0 pr-8 text-base font-semibold shadow-none focus-visible:ring-0"
+                    className="h-9 border-transparent bg-transparent px-0 text-base font-semibold shadow-none focus-visible:ring-0"
                   />
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-60 transition-opacity group-hover:opacity-100">
-                    <PencilLine className="size-4 text-muted-foreground" />
-                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => ws.select(null)}>
+                  <ChevronLeft className="size-4" />
+                </Button>
                 {ws.saving ? (
                   <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
                     <Loader2 className="size-3.5 animate-spin" />
@@ -119,7 +122,7 @@ export function Workspace() {
                     disabled={!ws.selectedId || ws.activeLoading}
                   >
                     {folderRoots.map((f) => (
-                      <option key={f.id} value={f.id}>
+                      <option key={f.id} value={f.id} className="bg-background text-foreground">
                         {f.name}
                       </option>
                     ))}

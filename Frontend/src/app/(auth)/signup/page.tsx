@@ -1,77 +1,109 @@
- "use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
-  const router = useRouter()
+  const router = useRouter();
 
-  const [pending, setPending] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  const [stage, setStage] = React.useState<"signup" | "otp">("signup")
-  const [emailForOtp, setEmailForOtp] = React.useState<string>("")
+  const [pending, setPending] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [stage, setStage] = React.useState<"signup" | "otp">("signup");
+  const [emailForOtp, setEmailForOtp] = React.useState<string>("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError(null)
-    setPending(true)
+    e.preventDefault();
+    setError(null);
+    setPending(true);
     try {
-      const form = new FormData(e.currentTarget)
-      const name = String(form.get("name") ?? "")
-      const email = String(form.get("email") ?? "")
-      const password = String(form.get("password") ?? "")
+      const form = new FormData(e.currentTarget);
+      const name = String(form.get("name") ?? "");
+      const email = String(form.get("email") ?? "");
+      const password = String(form.get("password") ?? "");
 
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name, email, password }),
-      })
+      });
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { message?: string } | null
-        throw new Error(data?.message ?? "Signup failed")
+        const data = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? "Signup failed");
       }
 
-      setEmailForOtp(email)
-      setStage("otp")
+      setEmailForOtp(email);
+      setStage("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed")
+      setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
-      setPending(false)
+      setPending(false);
     }
   }
 
   async function onVerifyOtp(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError(null)
-    setPending(true)
+    e.preventDefault();
+    setError(null);
+    setPending(true);
     try {
-      const form = new FormData(e.currentTarget)
-      const otp = String(form.get("otp") ?? "")
+      const form = new FormData(e.currentTarget);
+      const otp = String(form.get("otp") ?? "");
 
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email: emailForOtp, otp }),
-      })
+      });
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { message?: string } | null
-        throw new Error(data?.message ?? "Verification failed")
+        const data = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? "Verification failed");
       }
 
-      router.replace("/app")
-      router.refresh()
+      router.replace("/app");
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed")
+      setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
-      setPending(false)
+      setPending(false);
+    }
+  }
+  async function onResendOtp() {
+    setError(null);
+    setPending(true);
+    try {
+      const res = await fetch("/api/auth/resend-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: emailForOtp }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? "Resend failed");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Resend failed");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -80,7 +112,11 @@ export default function SignupPage() {
       <div className="mx-auto flex min-h-dvh max-w-md items-center px-4">
         <Card className="w-full">
           <CardHeader>
-            <CardTitle>{stage === "signup" ? "Create your workspace" : "Verify your email"}</CardTitle>
+            <CardTitle>
+              {stage === "signup"
+                ? "Create your workspace"
+                : "Verify your email"}
+            </CardTitle>
             <CardDescription>
               {stage === "signup"
                 ? "We’ll send a one-time code to verify your email."
@@ -96,7 +132,13 @@ export default function SignupPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" autoComplete="email" required />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password">Password</Label>
@@ -121,7 +163,10 @@ export default function SignupPage() {
 
                 <p className="text-sm text-muted-foreground">
                   Already have an account?{" "}
-                  <Link className="text-foreground underline underline-offset-4" href="/login">
+                  <Link
+                    className="text-foreground underline underline-offset-4"
+                    href="/login"
+                  >
                     Sign in
                   </Link>
                   .
@@ -131,7 +176,13 @@ export default function SignupPage() {
               <form onSubmit={onVerifyOtp} className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="otp">Verification code</Label>
-                  <Input id="otp" name="otp" inputMode="numeric" autoComplete="one-time-code" required />
+                  <Input
+                    id="otp"
+                    name="otp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    required
+                  />
                 </div>
 
                 {error ? (
@@ -144,19 +195,28 @@ export default function SignupPage() {
                   {pending ? "Verifying..." : "Verify & continue"}
                 </Button>
 
-                <button
-                  type="button"
-                  className="text-left text-sm text-muted-foreground underline underline-offset-4"
-                  onClick={() => setStage("signup")}
-                >
-                  Use a different email
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    className="text-sm text-muted-foreground underline underline-offset-4"
+                    onClick={() => setStage("signup")}
+                  >
+                    Use a different email
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm text-muted-foreground underline underline-offset-4"
+                    onClick={onResendOtp}
+                    disabled={pending}
+                  >
+                    Resend code
+                  </button>
+                </div>
               </form>
             )}
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
-
