@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { apiFetch } from "@/lib/api"
+import { toast } from "sonner"
 
 type AiAction = "summarize" | "rewrite" | "generate-title" | "key-points"
 
@@ -44,9 +45,12 @@ export function useAiPanel(): AiState {
           const kp = (data as { keyPoints?: unknown }).keyPoints
           setKeyPoints(Array.isArray(kp) ? kp.filter((x) => typeof x === "string") : null)
         }
+        toast.success(`${action.replace("-", " ")} completed`)
         return data
       } catch (err) {
-        setError(err instanceof Error ? err.message : "AI request failed")
+        const msg = err instanceof Error ? err.message : "AI request failed"
+        setError(msg)
+        toast.error(msg)
         throw err
       } finally {
         setRunning(null)

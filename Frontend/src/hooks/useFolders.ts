@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-
 import { apiFetch } from "@/lib/api"
 import { useWorkspaceStore } from "@/stores/workspace.store"
+import { toast } from "sonner"
 
 export type Folder = {
   id: number
@@ -38,7 +38,6 @@ export function useFolders(): FoldersState {
   const setSelectedFolderId = useWorkspaceStore((s) => s.setSelectedFolderId)
 
   const refresh = React.useCallback(async () => {
-    setError(null)
     setLoading(true)
     try {
       const data = await apiFetch<Folder[]>("/api/v1/folders", { cache: "no-store" })
@@ -48,7 +47,9 @@ export function useFolders(): FoldersState {
         if (firstId) setSelectedFolderId(firstId)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load folders")
+      const msg = err instanceof Error ? err.message : "Failed to load folders"
+      setError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -67,15 +68,15 @@ export function useFolders(): FoldersState {
 
   const create = React.useCallback(
     async (args: { name: string }) => {
-      setError(null)
       try {
         await apiFetch<unknown>("/api/v1/folders", {
           method: "POST",
           body: JSON.stringify({ name: args.name, parentId: null }),
         })
+        toast.success(`Folder "${args.name}" created`)
         await refresh()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create folder")
+        toast.error(err instanceof Error ? err.message : "Failed to create folder")
       }
     },
     [refresh]
@@ -83,15 +84,15 @@ export function useFolders(): FoldersState {
 
   const rename = React.useCallback(
     async (args: { id: number; name: string }) => {
-      setError(null)
       try {
         await apiFetch<unknown>(`/api/v1/folders/${args.id}`, {
           method: "PATCH",
           body: JSON.stringify({ name: args.name }),
         })
+        toast.success(`Folder renamed to "${args.name}"`)
         await refresh()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to rename folder")
+        toast.error(err instanceof Error ? err.message : "Failed to rename folder")
       }
     },
     [refresh]
@@ -99,20 +100,21 @@ export function useFolders(): FoldersState {
 
   const remove = React.useCallback(
     async (id: number) => {
-      setError(null)
+      const folderName = folders.find(f => f.id === id)?.name || "folder"
       try {
         await apiFetch<unknown>(`/api/v1/folders/${id}`, {
           method: "DELETE",
         })
+        toast.success(`Folder "${folderName}" deleted`)
         if (selectedFolderId === id) {
           setSelectedFolderId(null)
         }
         await refresh()
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete folder")
+        toast.error(err instanceof Error ? err.message : "Failed to delete folder")
       }
     },
-    [refresh, selectedFolderId, setSelectedFolderId]
+    [refresh, selectedFolderId, setSelectedFolderId, folders]
   )
 
   return {

@@ -21,6 +21,7 @@ import { useAiPanel } from "@/hooks/useAiPanel";
 import { useFolderRootsList } from "@/hooks/useFolderRootsList";
 import { useNotesWorkspace } from "@/hooks/useNotesWorkspace";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -117,13 +118,16 @@ export function Workspace() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 size-7 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 size-7 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (confirm("Are you sure you want to delete this note?")) {
-                          void ws.removeNote(n.id);
-                        }
+                        toast.warning("Are you sure you want to delete this note?", {
+                          action: {
+                            label: "Delete",
+                            onClick: () => void ws.removeNote(n.id),
+                          },
+                        });
                       }}
                     >
                       <Trash2 className="size-3.5" />
@@ -192,7 +196,7 @@ export function Workspace() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-3 text-xs font-semibold shadow-sm"
+                className="h-7 px-3 text-xs font-semibold shadow-sm cursor-pointer"
                 onClick={() => void ws.saveNow()}
                 disabled={!ws.selectedId || ws.activeLoading || ws.saving}
               >
@@ -201,7 +205,7 @@ export function Workspace() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto pt-16 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <main className="flex-1 overflow-y-auto pt-16 pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="mx-auto max-w-3xl px-8 lg:px-16 space-y-10">
               <div className="relative group flex items-center gap-2.5">
                 <PencilLine className="size-6" />

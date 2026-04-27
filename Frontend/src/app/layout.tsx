@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
+import { Toaster } from "sonner";
+
+import Script from "next/script";
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -24,7 +28,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script
+        <Script
+          id="theme-switcher"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html:
               '(function(){try{var t=localStorage.getItem("tn_theme");if(t==="light"){document.documentElement.classList.remove("dark")}else{document.documentElement.classList.add("dark")}}catch(e){document.documentElement.classList.add("dark")}})();',
@@ -33,6 +39,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

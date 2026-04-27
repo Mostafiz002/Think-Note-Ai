@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 export function LoginForm() {
   const router = useRouter()
@@ -43,10 +44,13 @@ export function LoginForm() {
         throw new Error(data?.message ?? "Login failed")
       }
 
+      toast.success("Welcome back!")
       router.replace(next)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      const msg = err instanceof Error ? err.message : "Login failed"
+      setError(msg)
+      toast.error(msg)
     } finally {
       setPending(false)
     }

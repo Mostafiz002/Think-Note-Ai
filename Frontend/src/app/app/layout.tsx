@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { FoldersPanel } from "@/components/features/sidebar/FoldersPanel";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 

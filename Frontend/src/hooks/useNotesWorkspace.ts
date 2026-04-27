@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-
 import { apiFetch } from "@/lib/api"
 import type { Note, Paginated } from "@/lib/types"
 import { useWorkspaceStore } from "@/stores/workspace.store"
+import { toast } from "sonner"
 
 type WorkspaceState = {
   q: string
@@ -70,7 +70,6 @@ export function useNotesWorkspace(): WorkspaceState {
   const [saveError, setSaveError] = React.useState<string | null>(null)
 
   const refreshList = React.useCallback(async () => {
-    setNotesError(null)
     setNotesLoading(true)
     try {
       if (!selectedFolderId) {
@@ -92,7 +91,9 @@ export function useNotesWorkspace(): WorkspaceState {
         }
       }
     } catch (err) {
-      setNotesError(err instanceof Error ? err.message : "Failed to load notes")
+      const msg = err instanceof Error ? err.message : "Failed to load notes"
+      setNotesError(msg)
+      toast.error(msg)
     } finally {
       setNotesLoading(false)
     }
@@ -115,7 +116,6 @@ export function useNotesWorkspace(): WorkspaceState {
     }
 
     let cancelled = false
-    setActiveError(null)
     setActiveLoading(true)
     void (async () => {
       try {
@@ -128,7 +128,9 @@ export function useNotesWorkspace(): WorkspaceState {
         setDraftMarkdown(note.markdownContent ?? "")
       } catch (err) {
         if (cancelled) return
-        setActiveError(err instanceof Error ? err.message : "Failed to load note")
+        const msg = err instanceof Error ? err.message : "Failed to load note"
+        setActiveError(msg)
+        toast.error(msg)
       } finally {
         if (!cancelled) setActiveLoading(false)
       }
@@ -139,10 +141,9 @@ export function useNotesWorkspace(): WorkspaceState {
   }, [selectedId])
 
   const createNote = React.useCallback(async () => {
-    setNotesError(null)
     try {
       if (!selectedFolderId) {
-        setNotesError("Select a folder to create a note.")
+        toast.error("Select a folder to create a note.")
         return
       }
 
@@ -158,14 +159,14 @@ export function useNotesWorkspace(): WorkspaceState {
       })
       setNotes((prev) => [created, ...prev])
       setSelectedId(created.id)
+      toast.success("Note created")
     } catch (err) {
-      setNotesError(err instanceof Error ? err.message : "Failed to create note")
+      toast.error(err instanceof Error ? err.message : "Failed to create note")
     }
   }, [selectedFolderId])
 
   const saveNow = React.useCallback(async () => {
     if (!selectedId) return
-    setSaveError(null)
     setSaving(true)
     try {
       const updated = await apiFetch<Note>(`/api/v1/notes/${selectedId}`, {
@@ -190,16 +191,16 @@ export function useNotesWorkspace(): WorkspaceState {
   const moveToFolder = React.useCallback(
     async (folderId: number) => {
       if (!selectedId) return
-      setNotesError(null)
       try {
         await apiFetch<unknown>(`/api/v1/notes/${selectedId}/folder`, {
           method: "PATCH",
           body: JSON.stringify({ folderId }),
         })
+        toast.success("Note moved")
         // if moved out of the current folder filter, refresh list to reflect it
         await refreshList()
       } catch (err) {
-        setNotesError(err instanceof Error ? err.message : "Failed to move note")
+        toast.error(err instanceof Error ? err.message : "Failed to move note")
       }
     },
     [refreshList, selectedId]
@@ -207,20 +208,21 @@ export function useNotesWorkspace(): WorkspaceState {
 
   const removeNote = React.useCallback(
     async (id: number) => {
-      setNotesError(null)
+      const noteTitle = notes.find(n => n.id === id)?.title || "note"
       try {
         await apiFetch<unknown>(`/api/v1/notes/${id}`, {
           method: "DELETE",
         })
+        toast.success(`Note "${noteTitle}" deleted`)
         if (selectedId === id) {
           setSelectedId(null)
         }
         await refreshList()
       } catch (err) {
-        setNotesError(err instanceof Error ? err.message : "Failed to delete note")
+        toast.error(err instanceof Error ? err.message : "Failed to delete note")
       }
     },
-    [refreshList, selectedId]
+    [refreshList, selectedId, notes]
   )
 
   const lastSavedRef = React.useRef<{ id: number; title: string; markdown: string } | null>(null)

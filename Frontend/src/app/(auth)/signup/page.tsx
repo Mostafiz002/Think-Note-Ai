@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -46,10 +47,13 @@ export default function SignupPage() {
         throw new Error(data?.message ?? "Signup failed");
       }
 
+      toast.success("Code sent! Check your inbox.");
       setEmailForOtp(email);
       setStage("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed");
+      const msg = err instanceof Error ? err.message : "Signup failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setPending(false);
     }
@@ -76,10 +80,13 @@ export default function SignupPage() {
         throw new Error(data?.message ?? "Verification failed");
       }
 
+      toast.success("Welcome aboard!");
       router.replace("/app");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed");
+      const msg = err instanceof Error ? err.message : "Verification failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setPending(false);
     }
@@ -100,8 +107,11 @@ export default function SignupPage() {
         } | null;
         throw new Error(data?.message ?? "Resend failed");
       }
+      toast.success("New code sent!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Resend failed");
+      const msg = err instanceof Error ? err.message : "Resend failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setPending(false);
     }

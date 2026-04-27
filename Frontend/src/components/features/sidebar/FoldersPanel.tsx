@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFolders, type Folder } from "@/hooks/useFolders";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function renderTree(args: {
   nodes: Folder[];
@@ -28,7 +29,7 @@ function renderTree(args: {
         onClick={() => args.onSelect(f.id)}
         className={cn(
           "group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-all duration-200",
-          "cursor-pointer",
+          "",
           args.selectedId === f.id 
             ? "bg-secondary shadow-sm text-foreground" 
             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -74,7 +75,7 @@ function renderTree(args: {
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-7 hover:bg-background shadow-sm"
+                className="size-7 hover:bg-background shadow-sm cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -87,7 +88,7 @@ function renderTree(args: {
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-7 hover:bg-destructive/10 text-destructive shadow-sm"
+                className="size-7 hover:bg-destructive/10 text-destructive shadow-sm cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -140,7 +141,7 @@ export function FoldersPanel() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {/* Header with Tracking and Primary Accents */}
+      {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <div className="size-1.5 rounded-full bg-primary animate-pulse" />
@@ -160,7 +161,7 @@ export function FoldersPanel() {
         </Button>
       </div>
 
-      {/* Input Section - Matched to Workspace Search Style */}
+      {/* Input Section */}
       <div className="relative group">
         <Input
           value={name}
@@ -181,9 +182,8 @@ export function FoldersPanel() {
         </div>
       )}
 
-      {/* Folders List Container - Matched to AI Panel's Glass-morphism */}
+      {/* Folders List Container */}
       <div className="relative flex-1 overflow-auto rounded-xl border border-primary/5 bg-linear-to-b from-muted/30 to-background/50 p-1.5">
-        {/* Sublte inner glow */}
         <div className="absolute inset-0 -z-10 bg-grid-white/[0.02]" />
         
         <div className="h-full rounded-[10px] bg-background/40 backdrop-blur-sm p-1">
@@ -204,9 +204,12 @@ export function FoldersPanel() {
                 startRename,
                 commitRename,
                 onDelete: (id: number) => {
-                  if (confirm("Are you sure you want to delete this folder?")) {
-                    void folders.remove(id);
-                  }
+                  toast.warning("Are you sure you want to delete this folder?", {
+                    action: {
+                      label: "Delete",
+                      onClick: () => void folders.remove(id),
+                    },
+                  });
                 },
               })}
             </div>
