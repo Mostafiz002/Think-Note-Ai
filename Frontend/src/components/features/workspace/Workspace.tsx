@@ -94,23 +94,41 @@ export function Workspace() {
                 </div>
               ) : (
                 ws.notes.map((n) => (
-                  <button
+                  <div
                     key={n.id}
-                    onClick={() => ws.select(n.id)}
                     className={cn(
-                      "w-full rounded-md px-3 py-2 text-left transition-colors",
+                      "group relative w-full rounded-md px-3 py-2 text-left transition-colors",
                       ws.selectedId === n.id
                         ? "bg-secondary shadow-sm"
                         : "hover:bg-muted/50",
                     )}
                   >
-                    <div className="truncate text-sm font-medium">
-                      {n.title || "Untitled"}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground/60 tabular-nums">
-                      {new Date(n.updatedAt).toLocaleDateString()}
-                    </div>
-                  </button>
+                    <button
+                      className="w-full text-left"
+                      onClick={() => ws.select(n.id)}
+                    >
+                      <div className="truncate pr-8 text-sm font-medium">
+                        {n.title || "Untitled"}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground/60 tabular-nums">
+                        {new Date(n.updatedAt).toLocaleDateString()}
+                      </div>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 size-7 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (confirm("Are you sure you want to delete this note?")) {
+                          void ws.removeNote(n.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 ))
               )}
             </div>
@@ -171,19 +189,6 @@ export function Workspace() {
                   ))}
                 </select>
               </label>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-3 text-xs font-semibold shadow-sm text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/20"
-                onClick={() => {
-                  if (confirm("Are you sure you want to delete this note?")) {
-                    void ws.removeNote(ws.selectedId!);
-                  }
-                }}
-                disabled={!ws.selectedId || ws.activeLoading}
-              >
-                <Trash2 className="size-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Delete</span>
-              </Button>
               <Button
                 variant="outline"
                 size="sm"

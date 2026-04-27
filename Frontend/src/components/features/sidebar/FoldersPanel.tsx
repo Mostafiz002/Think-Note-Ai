@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, FolderPlus, Folder as FolderIcon, Loader2, PencilLine, Sparkles } from "lucide-react";
+import { Check, FolderPlus, Folder as FolderIcon, Loader2, PencilLine, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ function renderTree(args: {
   setRenameValue: (v: string) => void;
   startRename: (folder: Folder) => void;
   commitRename: () => void;
+  onDelete: (id: number) => void;
 }): React.ReactNode {
   const depth = args.depth ?? 0;
   return args.nodes.map((f) => (
@@ -81,6 +82,19 @@ function renderTree(args: {
                 }}
               >
                 <PencilLine className="size-3.5 text-muted-foreground" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-7 hover:bg-destructive/10 text-destructive shadow-sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  args.onDelete(f.id);
+                }}
+              >
+                <Trash2 className="size-3.5" />
               </Button>
             </span>
           </>
@@ -189,6 +203,11 @@ export function FoldersPanel() {
                 setRenameValue,
                 startRename,
                 commitRename,
+                onDelete: (id: number) => {
+                  if (confirm("Are you sure you want to delete this folder?")) {
+                    void folders.remove(id);
+                  }
+                },
               })}
             </div>
           ) : (
