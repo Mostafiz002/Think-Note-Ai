@@ -11,6 +11,7 @@ import {
   Wand2,
   ChevronLeft,
   FolderInput,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -155,7 +156,9 @@ export function Workspace() {
               )}
               <label className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1 text-[11px] group hover:bg-muted/50 transition-colors">
                 <FolderInput className="size-3 text-muted-foreground group-hover:text-foreground transition-colors" />
-                <span className="text-muted-foreground font-medium hidden sm:inline-block">Move to</span>
+                <span className="text-muted-foreground font-medium hidden sm:inline-block">
+                  Move to
+                </span>
                 <select
                   className="dark:bg-black font-medium outline-none cursor-pointer text-foreground"
                   value={ws.active?.folderId ?? ""}
@@ -171,6 +174,19 @@ export function Workspace() {
               <Button
                 variant="outline"
                 size="sm"
+                className="h-7 px-3 text-xs font-semibold shadow-sm text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/20"
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this note?")) {
+                    void ws.removeNote(ws.selectedId!);
+                  }
+                }}
+                disabled={!ws.selectedId || ws.activeLoading}
+              >
+                <Trash2 className="size-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Delete</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 className="h-7 px-3 text-xs font-semibold shadow-sm"
                 onClick={() => void ws.saveNow()}
                 disabled={!ws.selectedId || ws.activeLoading || ws.saving}
@@ -180,7 +196,7 @@ export function Workspace() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto pt-16 pb-32">
+          <main className="flex-1 overflow-y-auto pt-16 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="mx-auto max-w-3xl px-8 lg:px-16 space-y-10">
               <div className="relative group flex items-center gap-2.5">
                 <PencilLine className="size-6" />
@@ -284,8 +300,12 @@ export function Workspace() {
 
                 {(() => {
                   const currentSummary = ai.summary || ws.active?.summary;
-                  const currentKeyPoints = ai.keyPoints || (ws.active?.keyPoints as string[]);
-                  const hasData = currentSummary || (currentKeyPoints && currentKeyPoints.length > 0) || ai.error;
+                  const currentKeyPoints =
+                    ai.keyPoints || (ws.active?.keyPoints as string[]);
+                  const hasData =
+                    currentSummary ||
+                    (currentKeyPoints && currentKeyPoints.length > 0) ||
+                    ai.error;
                   if (!hasData) return null;
 
                   return (
@@ -298,7 +318,8 @@ export function Workspace() {
                       {currentSummary && (
                         <div className="rounded-xl border border-primary/5 bg-primary/5 p-4 text-[13px] leading-relaxed text-foreground/80 shadow-inner group/summary">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-tighter text-primary/60 flex items-center gap-2">
-                            <div className="h-px flex-1 bg-primary/10" /> Summary
+                            <div className="h-px flex-1 bg-primary/10" />{" "}
+                            Summary
                           </div>
                           {currentSummary}
                         </div>
@@ -306,13 +327,16 @@ export function Workspace() {
                       {currentKeyPoints && currentKeyPoints.length > 0 && (
                         <div className="rounded-xl border border-primary/5 bg-primary/5 p-4 text-[13px] leading-relaxed shadow-inner">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-tighter text-primary/60 flex items-center gap-2">
-                            <div className="h-px flex-1 bg-primary/10" /> Key Insights
+                            <div className="h-px flex-1 bg-primary/10" /> Key
+                            Insights
                           </div>
                           <ul className="space-y-1.5">
                             {currentKeyPoints.map((kp, i) => (
                               <li key={i} className="flex gap-2">
                                 <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/40 shadow-[0_0_5px_rgba(var(--primary),0.5)]" />
-                                <span className="text-muted-foreground">{kp}</span>
+                                <span className="text-muted-foreground">
+                                  {kp}
+                                </span>
                               </li>
                             ))}
                           </ul>

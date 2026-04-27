@@ -168,7 +168,7 @@ export function FoldersPanel() {
       )}
 
       {/* Folders List Container - Matched to AI Panel's Glass-morphism */}
-      <div className="relative flex-1 overflow-auto rounded-xl border border-primary/5 bg-gradient-to-b from-muted/30 to-background/50 p-1.5">
+      <div className="relative flex-1 overflow-auto rounded-xl border border-primary/5 bg-linear-to-b from-muted/30 to-background/50 p-1.5">
         {/* Sublte inner glow */}
         <div className="absolute inset-0 -z-10 bg-grid-white/[0.02]" />
         

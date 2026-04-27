@@ -33,6 +33,7 @@ type WorkspaceState = {
   createNote: () => Promise<void>
   saveNow: () => Promise<void>
   moveToFolder: (folderId: number) => Promise<void>
+  removeNote: (id: number) => Promise<void>
 }
 
 function useDebouncedEffect(effect: () => void, ms: number, deps: React.DependencyList) {
@@ -204,6 +205,24 @@ export function useNotesWorkspace(): WorkspaceState {
     [refreshList, selectedId]
   )
 
+  const removeNote = React.useCallback(
+    async (id: number) => {
+      setNotesError(null)
+      try {
+        await apiFetch<unknown>(`/api/v1/notes/${id}`, {
+          method: "DELETE",
+        })
+        if (selectedId === id) {
+          setSelectedId(null)
+        }
+        await refreshList()
+      } catch (err) {
+        setNotesError(err instanceof Error ? err.message : "Failed to delete note")
+      }
+    },
+    [refreshList, selectedId]
+  )
+
   const lastSavedRef = React.useRef<{ id: number; title: string; markdown: string } | null>(null)
   React.useEffect(() => {
     if (!selectedId) return
@@ -250,6 +269,7 @@ export function useNotesWorkspace(): WorkspaceState {
     createNote,
     saveNow,
     moveToFolder,
+    removeNote,
   }
 }
 

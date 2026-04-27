@@ -21,6 +21,7 @@ type FoldersState = {
   refresh: () => Promise<void>
   create: (args: { name: string }) => Promise<void>
   rename: (args: { id: number; name: string }) => Promise<void>
+  remove: (id: number) => Promise<void>
 }
 
 function findFirstFolderId(nodes: Folder[]): number | null {
@@ -96,6 +97,24 @@ export function useFolders(): FoldersState {
     [refresh]
   )
 
+  const remove = React.useCallback(
+    async (id: number) => {
+      setError(null)
+      try {
+        await apiFetch<unknown>(`/api/v1/folders/${id}`, {
+          method: "DELETE",
+        })
+        if (selectedFolderId === id) {
+          setSelectedFolderId(null)
+        }
+        await refresh()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete folder")
+      }
+    },
+    [refresh, selectedFolderId, setSelectedFolderId]
+  )
+
   return {
     folders,
     loading,
@@ -105,6 +124,7 @@ export function useFolders(): FoldersState {
     refresh,
     create,
     rename,
+    remove,
   }
 }
 
