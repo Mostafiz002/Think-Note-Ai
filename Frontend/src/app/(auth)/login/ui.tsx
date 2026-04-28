@@ -6,15 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { AuthPage } from "@/components/auth-page"
+import { AtSignIcon, LockIcon } from "lucide-react"
 
 export function LoginForm() {
   const router = useRouter()
@@ -57,52 +56,63 @@ export function LoginForm() {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
-      <div className="mx-auto flex min-h-dvh max-w-md items-center px-4">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Welcome back</CardTitle>
-            <CardDescription>Sign in to your notes workspace.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" autoComplete="email" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
+    <AuthPage 
+      title="Welcome back" 
+      description="Sign in to your notes workspace."
+    >
+      <form onSubmit={onSubmit} className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <InputGroup>
+            <InputGroupInput 
+              id="email" 
+              name="email" 
+              type="email" 
+              autoComplete="email" 
+              placeholder="your.email@example.com"
+              required 
+            />
+            <InputGroupAddon align="inline-start">
+              <AtSignIcon className="size-4" />
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Password</Label>
+          <InputGroup>
+            <InputGroupInput
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              required
+            />
+            <InputGroupAddon align="inline-start">
+              <LockIcon className="size-4" />
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
 
-              {error ? (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </div>
-              ) : null}
+        {error ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
 
-              <Button type="submit" disabled={pending}>
-                {pending ? "Signing in..." : "Sign in"}
-              </Button>
+        <Button className="w-full" type="submit" disabled={pending}>
+          {pending ? "Signing in..." : "Sign in"}
+        </Button>
 
-              <p className="text-sm text-muted-foreground">
-                New here?{" "}
-                <Link className="text-foreground underline underline-offset-4" href="/signup">
-                  Create an account
-                </Link>
-                .
-              </p>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <p className="text-sm text-muted-foreground text-center">
+          New here?{" "}
+          <Link className="text-foreground underline underline-offset-4" href="/signup">
+            Create an account
+          </Link>
+          .
+        </p>
+      </form>
+    </AuthPage>
   )
 }
 

@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <aside className="w-full lg:w-72 border-r bg-sidebar text-sidebar-foreground flex flex-col shrink-0 lg:h-full max-h-[35dvh] lg:max-h-full">
           <div className="flex items-center justify-between px-4 py-3 shrink-0">
             <Link href="/app" className="text-sm font-semibold tracking-tight">
-              Think Note AI
+              Think Note AI.
             </Link>
             <div className="flex items-center gap-1">
               <AnimatedThemeToggler className="cursor-pointer mx-2" />
