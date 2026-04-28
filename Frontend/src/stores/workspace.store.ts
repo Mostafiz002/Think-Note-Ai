@@ -16,6 +16,7 @@ type WorkspaceStore = {
   // Folders
   folders: Folder[]
   foldersLoading: boolean
+  foldersFetched: boolean
   selectedFolderId: number | null
   
   // Notes
@@ -57,6 +58,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   // Initial State
   folders: [],
   foldersLoading: false,
+  foldersFetched: false,
   selectedFolderId: null,
   
   notes: [],
@@ -104,7 +106,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     } catch (err) {
       toast.error("Failed to load folders")
     } finally {
-      set({ foldersLoading: false })
+      set({ foldersLoading: false, foldersFetched: true })
     }
   },
 
@@ -112,7 +114,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       const created = await apiFetch<Folder>("/api/v1/folders", {
         method: "POST",
-        body: JSON.stringify({ name, parentId: null }),
+        body: { name, parentId: null },
       })
       toast.success(`Folder "${name}" created`)
       set((state) => ({ folders: [...state.folders, created] }))
@@ -126,7 +128,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       await apiFetch(`/api/v1/folders/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name }),
+        body: { name },
       })
       set((state) => ({
         folders: state.folders.map(f => f.id === id ? { ...f, name } : f)
@@ -202,12 +204,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       const created = await apiFetch<Note>("/api/v1/notes", {
         method: "POST",
-        body: JSON.stringify({
+        body: {
           title: "Untitled",
           contentType: "MARKDOWN",
           markdownContent: " ",
           folderId: selectedFolderId,
-        }),
+        },
       })
       set((state) => ({ notes: [created, ...state.notes] }))
       get().setSelectedNoteId(created.id)
@@ -224,18 +226,17 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       const updated = await apiFetch<Note>(`/api/v1/notes/${selectedNoteId}`, {
         method: "PATCH",
-        body: JSON.stringify({
+        body: {
           title: draftTitle,
           contentType: "MARKDOWN",
           markdownContent: draftMarkdown,
-        }),
+        },
       })
       set((state) => ({
         activeNote: updated,
         notes: state.notes.map(n => n.id === updated.id ? { ...n, title: updated.title, updatedAt: updated.updatedAt } : n)
       }))
     } catch (err) {
-      // Don't toast error for autosave to avoid spam, but we could log it
       console.error("Autosave failed", err)
     }
   },
@@ -254,18 +255,30 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   moveNote: async (noteId, folderId) => {
+    const { selectedFolderId } = get()
     try {
       await apiFetch(`/api/v1/notes/${noteId}/folder`, {
         method: "PATCH",
-        body: JSON.stringify({ folderId }),
+        body: { folderId },
       })
       toast.success("Note moved")
-      set((state) => ({ 
-        notes: state.notes.filter(n => n.id !== noteId),
-        selectedNoteId: state.selectedNoteId === noteId ? null : state.selectedNoteId,
-        activeNote: state.selectedNoteId === noteId ? null : state.activeNote
-      }))
+      
+      if (selectedFolderId === folderId) {
+        set((state) => ({
+          activeNote: state.activeNote?.id === noteId ? { ...state.activeNote, folderId } : state.activeNote,
+          notes: state.notes.map(n => n.id === noteId ? { ...n, folderId } : n)
+        }))
+      } else {
+        set((state) => ({ 
+          notes: state.notes.filter(n => n.id !== noteId),
+          selectedNoteId: state.selectedNoteId === noteId ? null : state.selectedNoteId,
+          activeNote: state.selectedNoteId === noteId ? null : state.activeNote,
+          draftTitle: state.selectedNoteId === noteId ? "" : state.draftTitle,
+          draftMarkdown: state.selectedNoteId === noteId ? "" : state.draftMarkdown,
+        }))
+      }
     } catch (err) {
+      console.error("Move failed", err)
       toast.error("Failed to move note")
     }
   }

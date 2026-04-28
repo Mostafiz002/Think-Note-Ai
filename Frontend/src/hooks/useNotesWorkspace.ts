@@ -13,7 +13,7 @@ type WorkspaceState = {
   notesError: string | null
 
   selectedId: number | null
-  select: (id: number) => void
+  select: (id: number | null) => void
 
   active: Note | null
   activeLoading: boolean
@@ -43,66 +43,86 @@ function useDebouncedEffect(effect: () => void, ms: number, deps: React.Dependen
 }
 
 export function useNotesWorkspace(): WorkspaceState {
-  const store = useWorkspaceStore()
+  const q = useWorkspaceStore((s) => s.q)
+  const setQ = useWorkspaceStore((s) => s.setQ)
+  const notes = useWorkspaceStore((s) => s.notes)
+  const notesLoading = useWorkspaceStore((s) => s.notesLoading)
+  const selectedNoteId = useWorkspaceStore((s) => s.selectedNoteId)
+  const setSelectedNoteId = useWorkspaceStore((s) => s.setSelectedNoteId)
+  const activeNote = useWorkspaceStore((s) => s.activeNote)
+  const activeNoteLoading = useWorkspaceStore((s) => s.activeNoteLoading)
+  const draftTitle = useWorkspaceStore((s) => s.draftTitle)
+  const setDraftTitle = useWorkspaceStore((s) => s.setDraftTitle)
+  const draftMarkdown = useWorkspaceStore((s) => s.draftMarkdown)
+  const setDraftMarkdown = useWorkspaceStore((s) => s.setDraftMarkdown)
+  
+  const refreshNotes = useWorkspaceStore((s) => s.refreshNotes)
+  const createNote = useWorkspaceStore((s) => s.createNote)
+  const saveActiveNote = useWorkspaceStore((s) => s.saveActiveNote)
+  const moveNote = useWorkspaceStore((s) => s.moveNote)
+  const removeNote = useWorkspaceStore((s) => s.removeNote)
 
   // Autosave logic
   const lastSavedRef = React.useRef<{ id: number; title: string; markdown: string } | null>(null)
   
   React.useEffect(() => {
-    if (!store.selectedNoteId) return
+    if (!selectedNoteId) return
     lastSavedRef.current = { 
-      id: store.selectedNoteId, 
-      title: store.draftTitle, 
-      markdown: store.draftMarkdown 
+      id: selectedNoteId, 
+      title: draftTitle, 
+      markdown: draftMarkdown 
     }
-  }, [store.selectedNoteId])
+  }, [selectedNoteId])
 
   useDebouncedEffect(
     () => {
-      if (!store.selectedNoteId || store.activeNoteLoading) return
+      if (!selectedNoteId || activeNoteLoading) return
       const last = lastSavedRef.current
-      if (!last || last.id !== store.selectedNoteId) return
-      if (last.title === store.draftTitle && last.markdown === store.draftMarkdown) return
+      if (!last || last.id !== selectedNoteId) return
+      if (last.title === draftTitle && last.markdown === draftMarkdown) return
       
-      void store.saveActiveNote()
+      void saveActiveNote()
       lastSavedRef.current = { 
-        id: store.selectedNoteId, 
-        title: store.draftTitle, 
-        markdown: store.draftMarkdown 
+        id: selectedNoteId, 
+        title: draftTitle, 
+        markdown: draftMarkdown 
       }
     },
     800,
-    [store.draftTitle, store.draftMarkdown, store.selectedNoteId, store.activeNoteLoading]
+    [draftTitle, draftMarkdown, selectedNoteId, activeNoteLoading, saveActiveNote]
   )
 
   return {
-    q: store.q,
-    setQ: store.setQ,
+    q,
+    setQ,
 
-    notes: store.notes,
-    notesLoading: store.notesLoading,
+    notes,
+    notesLoading,
     notesError: null,
 
-    selectedId: store.selectedNoteId,
-    select: store.setSelectedNoteId,
+    selectedId: selectedNoteId,
+    select: setSelectedNoteId,
 
-    active: store.activeNote,
-    activeLoading: store.activeNoteLoading,
+    active: activeNote,
+    activeLoading: activeNoteLoading,
     activeError: null,
 
-    draftTitle: store.draftTitle,
-    setDraftTitle: store.setDraftTitle,
-    draftMarkdown: store.draftMarkdown,
-    setDraftMarkdown: store.setDraftMarkdown,
+    draftTitle,
+    setDraftTitle,
+    draftMarkdown,
+    setDraftMarkdown,
 
-    saving: false, // Could be derived from a specific state if needed
+    saving: false, 
     saveError: null,
 
-    refreshList: store.refreshNotes,
-    createNote: store.createNote,
-    saveNow: store.saveActiveNote,
-    moveToFolder: store.moveNote,
-    removeNote: store.removeNote,
+    refreshList: refreshNotes,
+    createNote,
+    saveNow: saveActiveNote,
+    moveToFolder: (folderId: number) => {
+      if (selectedNoteId) return moveNote(selectedNoteId, folderId)
+      return Promise.resolve()
+    },
+    removeNote,
   }
 }
 

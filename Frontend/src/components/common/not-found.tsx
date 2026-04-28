@@ -1,3 +1,5 @@
+"use client";
+
 import { FullWidthDivider } from "@/components/ui/full-width-divider";
 import { Button } from "@/components/ui/button";
 import {

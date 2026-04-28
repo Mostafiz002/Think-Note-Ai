@@ -11,6 +11,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { AuthPage } from "@/components/common/auth-page";
 import { AtSignIcon, LockIcon } from "lucide-react";
@@ -32,18 +33,10 @@ export function LoginForm() {
       const email = String(form.get("email") ?? "");
       const password = String(form.get("password") ?? "");
 
-      const res = await fetch("/api/auth/login", {
+      await apiFetch("/api/auth/login", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(data?.message ?? "Login failed");
-      }
 
       toast.success("Welcome back!");
       router.replace(next);

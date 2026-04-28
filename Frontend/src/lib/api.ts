@@ -1,3 +1,5 @@
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios"
+
 export class ApiError extends Error {
   status: number
   data: unknown
@@ -22,48 +24,65 @@ function errorMessageFromData(data: unknown) {
   return null
 }
 
-async function parseJsonSafely(res: Response) {
-  const text = await res.text()
-  if (!text) return null
-  try {
-    return JSON.parse(text) as unknown
-  } catch {
-    return text
+const api = axios.create({
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+
+// Flag to prevent infinite refresh loops
+let isRefreshing = false
+
+api.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.startsWith("/api/auth/")
+    ) {
+      if (isRefreshing) return Promise.reject(error)
+      
+      isRefreshing = true
+      originalRequest._retry = true
+
+      try {
+        await axios.post("/api/auth/refresh-token")
+        isRefreshing = false
+        return api(originalRequest)
+      } catch (refreshError) {
+        isRefreshing = false
+      }
+    }
+
+    if (error.response) {
+      const data = error.response.data
+      const msg = errorMessageFromData(data)
+      const apiErr = new ApiError(msg ? `API ${error.response.status}: ${msg}` : `API request failed (${error.response.status})`, {
+        status: error.response.status,
+        data,
+      })
+      return Promise.reject(apiErr)
+    }
+
+    return Promise.reject(error)
   }
-}
+)
 
 export async function apiFetch<T>(
   path: string,
-  init?: Omit<RequestInit, "headers"> & { headers?: Record<string, string> }
+  init?: { method?: string; body?: any; headers?: Record<string, string>; cache?: string }
 ): Promise<T> {
-  const attempt = async (retrying: boolean): Promise<T> => {
-  const headers: Record<string, string> = { ...(init?.headers ?? {}) }
-  if (init?.body && !headers["content-type"]) {
-    headers["content-type"] = "application/json"
-  }
-
-  const res = await fetch(path, {
-    ...init,
-    headers,
+  const response = await api.request<T>({
+    url: path,
+    method: init?.method || "GET",
+    data: init?.body,
+    headers: init?.headers,
   })
-
-  const data = await parseJsonSafely(res)
-  if (res.status === 401 && !retrying && !path.startsWith("/api/auth/")) {
-    const refreshed = await fetch("/api/auth/refresh-token", { method: "POST" })
-    if (refreshed.ok) {
-      return attempt(true)
-    }
-  }
-  if (!res.ok) {
-    const msg = errorMessageFromData(data)
-    throw new ApiError(msg ? `API ${res.status}: ${msg}` : `API request failed (${res.status})`, {
-      status: res.status,
-      data,
-    })
-  }
-  return data as T
-  }
-
-  return attempt(false)
+  
+  return response.data
 }
 

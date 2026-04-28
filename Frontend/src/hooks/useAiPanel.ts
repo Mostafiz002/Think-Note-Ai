@@ -35,7 +35,7 @@ export function useAiPanel(): AiState {
       try {
         const data = await apiFetch<unknown>(`/api/v1/ai/${action}`, {
           method: "POST",
-          body: JSON.stringify(args),
+          body: args,
         })
         if (action === "summarize") {
           const s = (data as { summary?: unknown }).summary

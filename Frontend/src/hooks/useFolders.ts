@@ -3,6 +3,8 @@
 import * as React from "react"
 import { useWorkspaceStore, type Folder } from "@/stores/workspace.store"
 
+export type { Folder }
+
 type FoldersState = {
   folders: Folder[]
   loading: boolean
@@ -16,24 +18,37 @@ type FoldersState = {
 }
 
 export function useFolders(): FoldersState {
-  const store = useWorkspaceStore()
+  const folders = useWorkspaceStore((s) => s.folders)
+  const loading = useWorkspaceStore((s) => s.foldersLoading)
+  const selectedFolderId = useWorkspaceStore((s) => s.selectedFolderId)
+  const setSelectedFolderId = useWorkspaceStore((s) => s.setSelectedFolderId)
+  const refreshFolders = useWorkspaceStore((s) => s.refreshFolders)
+  const foldersFetched = useWorkspaceStore((s) => s.foldersFetched)
+  const createFolder = useWorkspaceStore((s) => s.createFolder)
+  const renameFolder = useWorkspaceStore((s) => s.renameFolder)
+  const removeFolder = useWorkspaceStore((s) => s.removeFolder)
+
+  const fetchingRef = React.useRef(false)
 
   React.useEffect(() => {
-    if (store.folders.length === 0) {
-      void store.refreshFolders()
+    if (!foldersFetched && !loading && !fetchingRef.current) {
+      fetchingRef.current = true
+      void refreshFolders().finally(() => {
+        fetchingRef.current = false
+      })
     }
-  }, [store])
+  }, [foldersFetched, loading, refreshFolders])
 
   return {
-    folders: store.folders,
-    loading: store.foldersLoading,
-    error: null, // Error handled via toast in store
-    selectedFolderId: store.selectedFolderId,
-    selectFolder: store.setSelectedFolderId,
-    refresh: store.refreshFolders,
-    create: (args) => store.createFolder(args.name),
-    rename: (args) => store.renameFolder(args.id, args.name),
-    remove: store.removeFolder,
+    folders,
+    loading,
+    error: null,
+    selectedFolderId,
+    selectFolder: setSelectedFolderId,
+    refresh: refreshFolders,
+    create: (args) => createFolder(args.name),
+    rename: (args) => renameFolder(args.id, args.name),
+    remove: removeFolder,
   }
 }
 

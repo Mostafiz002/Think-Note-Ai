@@ -11,9 +11,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
+import { AtSignIcon, KeyIcon, LockIcon, UserIcon } from "lucide-react";
 import { AuthPage } from "@/components/common/auth-page";
-import { AtSignIcon, LockIcon, UserIcon, KeyIcon } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -33,18 +34,10 @@ export default function SignupPage() {
       const email = String(form.get("email") ?? "");
       const password = String(form.get("password") ?? "");
 
-      const res = await fetch("/api/auth/register", {
+      await apiFetch("/api/auth/register", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: { name, email, password },
       });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(data?.message ?? "Signup failed");
-      }
 
       toast.success("Code sent! Check your inbox.");
       setEmailForOtp(email);
@@ -66,18 +59,10 @@ export default function SignupPage() {
       const form = new FormData(e.currentTarget);
       const otp = String(form.get("otp") ?? "");
 
-      const res = await fetch("/api/auth/verify-otp", {
+      await apiFetch("/api/auth/verify-otp", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: emailForOtp, otp }),
+        body: { email: emailForOtp, otp },
       });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(data?.message ?? "Verification failed");
-      }
 
       toast.success("Welcome aboard!");
       router.replace("/app");
@@ -94,18 +79,10 @@ export default function SignupPage() {
     setError(null);
     setPending(true);
     try {
-      const res = await fetch("/api/auth/resend-otp", {
+      await apiFetch("/api/auth/resend-otp", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: emailForOtp }),
+        body: { email: emailForOtp },
       });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(data?.message ?? "Resend failed");
-      }
       toast.success("New code sent!");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Resend failed";
