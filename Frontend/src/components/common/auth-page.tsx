@@ -1,9 +1,9 @@
 "use client";
 
 import type React from "react";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
-import { FloatingPaths } from "@/components/floating-paths";
+import { FloatingPaths } from "@/components/common/floating-paths";
 import { ChevronLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

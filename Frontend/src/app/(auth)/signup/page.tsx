@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AuthPage } from "@/components/auth-page";
+import { AuthPage } from "@/components/common/auth-page";
 import { AtSignIcon, LockIcon, UserIcon, KeyIcon } from "lucide-react";
 
 export default function SignupPage() {
@@ -130,12 +130,12 @@ export default function SignupPage() {
           <div className="grid gap-2">
             <Label htmlFor="name">Name</Label>
             <InputGroup>
-              <InputGroupInput 
-                id="name" 
-                name="name" 
-                autoComplete="name" 
+              <InputGroupInput
+                id="name"
+                name="name"
+                autoComplete="name"
                 placeholder="John Doe"
-                required 
+                required
               />
               <InputGroupAddon align="inline-start">
                 <UserIcon className="size-4" />
