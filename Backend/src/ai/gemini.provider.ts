@@ -47,6 +47,12 @@ export class GeminiProvider {
         );
       }
 
+      if (message.includes('503') || message.toLowerCase().includes('overloaded') || message.toLowerCase().includes('high demand')) {
+        throw new InternalServerErrorException(
+          'AI servers are currently overloaded due to high demand. Please try again in a few seconds.',
+        );
+      }
+
       if (message.toLowerCase().includes('safety') || message.toLowerCase().includes('blocked')) {
         throw new BadRequestException(
           'The AI declined the request due to safety filters. Please try a different prompt.',

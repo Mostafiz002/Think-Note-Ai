@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Think Note AI - Frontend 🎨
 
-## Getting Started
+The user interface of Think Note AI is built for speed, aesthetics, and a premium user experience. It leverages modern React patterns and the latest Next.js features to provide a seamless "second brain" experience.
 
-First, run the development server:
+## ✨ Highlights
+- **Glassmorphism UI**: Beautiful, translucent layers with vibrant gradients.
+- **Micro-interactions**: Subtle animations using `motion` for every state change.
+- **Granular State**: Optimized Zustand selectors to prevent unnecessary re-renders.
+- **Debounced Autosave**: Intelligent saving logic that preserves your work without overwhelming the API.
+- **Responsive Workspace**: A sidebar-to-full-editor transition logic optimized for all viewports.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠 Tech Stack
+- **Next.js 16 (App Router)**: Utilizing Turbopack for lightning-fast development.
+- **React 19**: Leveraging the latest concurrent features.
+- **Tailwind CSS 4**: Next-gen styling with better performance and simplified configuration.
+- **Shadcn UI**: Beautifully designed components built with Radix UI.
+- **Zustand**: Lightweight and scalable global state management.
+- **Motion**: Advanced animations and gestures.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Getting Started
+1. Install dependencies: `pnpm install`
+2. Configure `.env.local`:
+   ```env
+   BACKEND_URL="http://localhost:5000"
+   ```
+3. Start dev server: `pnpm run dev`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📁 Directory Structure
+- `src/app`: Next.js App Router pages, layouts, and auth flows.
+- `src/components/ui`: Reusable, atomic UI components (Shadcn based).
+- `src/components/features`: Feature-specific modules like `Workspace` and `Sidebar`.
+- `src/hooks`: Custom React hooks for state, AI processing, and debouncing.
+- `src/stores`: Zustand store definitions for global application state.
+- `src/lib`: Shared utilities, Axios API client, and shared TypeScript types.

@@ -1,4 +1,4 @@
-import { PrismaService } from './../prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -20,11 +20,11 @@ export class NoteService {
 
   async create(createNoteDto: CreateNoteDto, userId: number) {
     const contentType = createNoteDto.contentType ?? NoteContentType.MARKDOWN;
-    
+
     if (createNoteDto.folderId) {
       await this.ensureFolderOwnership(createNoteDto.folderId, userId);
     }
-    
+
     const data: Prisma.NoteUncheckedCreateInput = {
       title: createNoteDto.title?.trim() || 'Untitled',
       contentType,
@@ -40,7 +40,8 @@ export class NoteService {
     } else {
       data.body = null;
       data.markdownContent = null;
-      data.jsonContent = (createNoteDto.jsonContent ?? {}) as Prisma.InputJsonValue;
+      data.jsonContent = (createNoteDto.jsonContent ??
+        {}) as Prisma.InputJsonValue;
     }
 
     const note = await this.prismaService.note.create({
@@ -153,13 +154,16 @@ export class NoteService {
   async update(id: number, updateNoteDto: UpdateNoteDto, userId: number) {
     const note = await this.ensureOwnership(id, userId);
     const contentType = updateNoteDto.contentType ?? note.contentType;
-    
+
     if (updateNoteDto.folderId) {
       await this.ensureFolderOwnership(updateNoteDto.folderId, userId);
     }
-    
+
     const data: Prisma.NoteUncheckedUpdateInput = {
-      title: updateNoteDto.title !== undefined ? (updateNoteDto.title.trim() || 'Untitled') : undefined,
+      title:
+        updateNoteDto.title !== undefined
+          ? updateNoteDto.title.trim() || 'Untitled'
+          : undefined,
       contentType,
       folderId: updateNoteDto.folderId,
     };
@@ -174,7 +178,8 @@ export class NoteService {
       data.body = null;
       data.markdownContent = null;
       if (updateNoteDto.jsonContent !== undefined) {
-        data.jsonContent = (updateNoteDto.jsonContent ?? {}) as Prisma.InputJsonValue;
+        data.jsonContent = (updateNoteDto.jsonContent ??
+          {}) as Prisma.InputJsonValue;
       }
     }
 
@@ -424,7 +429,6 @@ export class NoteService {
         : undefined,
     };
   }
-
 
   private buildRawSearchWhereSql(
     query: SearchNotesDto,

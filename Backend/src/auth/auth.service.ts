@@ -11,7 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -53,7 +53,8 @@ export class AuthService {
     await this.prismaService.note.create({
       data: {
         title: 'Getting Started',
-        markdownContent: '# Welcome to Think Note AI!\n\nThis is your first note. You can edit it, delete it, or create new ones using the sidebar.\n\nEnjoy using Think Note AI!',
+        markdownContent:
+          '# Welcome to Think Note AI!\n\nThis is your first note. You can edit it, delete it, or create new ones using the sidebar.\n\nEnjoy using Think Note AI!',
         userId: newUser.id,
         folderId: folder.id,
       },
@@ -109,13 +110,18 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
       take: 5,
     });
-    const match = await this.findMatchingOtp(otps.map((o) => o.codeHash), verifyOtpDto.otp);
+    const match = await this.findMatchingOtp(
+      otps.map((o) => o.codeHash),
+      verifyOtpDto.otp,
+    );
     if (!match) {
       throw new UnauthorizedException('OTP is invalid or expired');
     }
 
     await this.userService.markEmailVerified(verifyOtpDto.email);
-    await this.prismaService.emailOtp.deleteMany({ where: { email: verifyOtpDto.email } });
+    await this.prismaService.emailOtp.deleteMany({
+      where: { email: verifyOtpDto.email },
+    });
 
     return await this.issueTokens(user.id, user.name ?? '');
   }
@@ -162,7 +168,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.prismaService.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.prismaService.user.findUnique({
+      where: { id: payload.sub },
+    });
     if (!user || !user.refreshTokenHash) {
       throw new UnauthorizedException('Invalid refresh token');
     }

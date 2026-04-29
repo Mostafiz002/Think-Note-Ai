@@ -1,5 +1,10 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { AiNoteRequestDto } from './dto/ai-note-request.dto';
 import { GeminiProvider } from './gemini.provider';
 
@@ -36,9 +41,14 @@ export class AiService {
   async summarizeNote(dto: AiNoteRequestDto, userId: number) {
     this.checkLimit(userId);
     const note = await this.getOwnedNote(dto.noteId, userId);
-    const prompt = this.buildPrompt('summarize', note.title, this.getContent(note), dto.instruction);
+    const prompt = this.buildPrompt(
+      'summarize',
+      note.title,
+      this.getContent(note),
+      dto.instruction,
+    );
     const result = await this.geminiProvider.generateJson<AiOutput>(prompt);
-    console.log("AI RESULT:", result);
+    console.log('AI RESULT:', result);
 
     const summary = result.summary ?? '';
     if (summary) {
@@ -57,7 +67,12 @@ export class AiService {
   async rewriteNote(dto: AiNoteRequestDto, userId: number) {
     this.checkLimit(userId);
     const note = await this.getOwnedNote(dto.noteId, userId);
-    const prompt = this.buildPrompt('rewrite', note.title, this.getContent(note), dto.instruction);
+    const prompt = this.buildPrompt(
+      'rewrite',
+      note.title,
+      this.getContent(note),
+      dto.instruction,
+    );
     const result = await this.geminiProvider.generateJson<AiOutput>(prompt);
 
     return {
@@ -108,14 +123,21 @@ export class AiService {
     };
   }
 
-  private getContent(note: { markdownContent: string | null; jsonContent: unknown }) {
+  private getContent(note: {
+    markdownContent: string | null;
+    jsonContent: unknown;
+  }) {
     if (note.markdownContent) return note.markdownContent;
     if (note.jsonContent) return JSON.stringify(note.jsonContent);
     return '';
   }
 
   private buildPrompt(
-    task: 'summarize' | 'rewrite' | 'generate_short_title' | 'extract_key_points',
+    task:
+      | 'summarize'
+      | 'rewrite'
+      | 'generate_short_title'
+      | 'extract_key_points',
     title: string,
     content: string,
     instruction?: string,
@@ -142,7 +164,9 @@ export class AiService {
   }
 
   private async getOwnedNote(noteId: number, userId: number) {
-    const note = await this.prismaService.note.findFirst({ where: { id: noteId } });
+    const note = await this.prismaService.note.findFirst({
+      where: { id: noteId },
+    });
     if (!note) throw new NotFoundException('Note not found');
     if (note.userId !== userId) throw new ForbiddenException('Not allowed');
     return note;

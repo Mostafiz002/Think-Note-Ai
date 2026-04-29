@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpdateFolderDto } from './dto/update-folder.dto';
 import { Folder } from '../../generated/prisma/client';
@@ -59,7 +59,11 @@ export class FolderService {
       }
 
       await this.ensureOwnership(updateFolderDto.parentId, userId);
-      await this.ensureNoCircularReference(id, updateFolderDto.parentId, userId);
+      await this.ensureNoCircularReference(
+        id,
+        updateFolderDto.parentId,
+        userId,
+      );
     }
 
     return this.prismaService.folder.update({
@@ -93,7 +97,9 @@ export class FolderService {
 
     while (currentParentId) {
       if (currentParentId === folderId) {
-        throw new BadRequestException('Circular folder hierarchy is not allowed');
+        throw new BadRequestException(
+          'Circular folder hierarchy is not allowed',
+        );
       }
 
       const parent = await this.prismaService.folder.findFirst({
