@@ -20,25 +20,27 @@ export class NoteService {
 
   async create(createNoteDto: CreateNoteDto, userId: number) {
     const contentType = createNoteDto.contentType ?? NoteContentType.MARKDOWN;
-    this.validateNoteContent(createNoteDto, contentType);
+    
     if (createNoteDto.folderId) {
       await this.ensureFolderOwnership(createNoteDto.folderId, userId);
     }
+    
     const data: Prisma.NoteUncheckedCreateInput = {
-      title: createNoteDto.title,
+      title: createNoteDto.title?.trim() || 'Untitled',
       contentType,
       userId,
       folderId: createNoteDto.folderId,
     };
 
     if (contentType === NoteContentType.MARKDOWN) {
-      data.markdownContent = createNoteDto.markdownContent;
-      data.body = createNoteDto.markdownContent;
+      const content = createNoteDto.markdownContent ?? '';
+      data.markdownContent = content;
+      data.body = content;
       data.jsonContent = Prisma.JsonNull;
     } else {
       data.body = null;
       data.markdownContent = null;
-      data.jsonContent = createNoteDto.jsonContent as Prisma.InputJsonValue;
+      data.jsonContent = (createNoteDto.jsonContent ?? {}) as Prisma.InputJsonValue;
     }
 
     const note = await this.prismaService.note.create({
@@ -151,32 +153,29 @@ export class NoteService {
   async update(id: number, updateNoteDto: UpdateNoteDto, userId: number) {
     const note = await this.ensureOwnership(id, userId);
     const contentType = updateNoteDto.contentType ?? note.contentType;
-    this.validateNoteContent(
-      {
-        markdownContent: updateNoteDto.markdownContent ?? note.markdownContent,
-        jsonContent: updateNoteDto.jsonContent ?? note.jsonContent,
-      },
-      contentType,
-    );
+    
     if (updateNoteDto.folderId) {
       await this.ensureFolderOwnership(updateNoteDto.folderId, userId);
     }
+    
     const data: Prisma.NoteUncheckedUpdateInput = {
-      title: updateNoteDto.title,
+      title: updateNoteDto.title !== undefined ? (updateNoteDto.title.trim() || 'Untitled') : undefined,
       contentType,
       folderId: updateNoteDto.folderId,
     };
 
     if (contentType === NoteContentType.MARKDOWN) {
-      data.markdownContent =
-        updateNoteDto.markdownContent ?? note.markdownContent;
-      data.body = updateNoteDto.markdownContent ?? note.markdownContent;
+      if (updateNoteDto.markdownContent !== undefined) {
+        data.markdownContent = updateNoteDto.markdownContent ?? '';
+        data.body = updateNoteDto.markdownContent ?? '';
+      }
       data.jsonContent = Prisma.JsonNull;
     } else {
       data.body = null;
       data.markdownContent = null;
-      data.jsonContent = (updateNoteDto.jsonContent ??
-        note.jsonContent) as Prisma.InputJsonValue;
+      if (updateNoteDto.jsonContent !== undefined) {
+        data.jsonContent = (updateNoteDto.jsonContent ?? {}) as Prisma.InputJsonValue;
+      }
     }
 
     const updated = await this.prismaService.note.update({
@@ -426,22 +425,6 @@ export class NoteService {
     };
   }
 
-  private validateNoteContent(
-    dto: { markdownContent?: string | null; jsonContent?: unknown },
-    contentType: NoteContentType,
-  ) {
-    if (contentType === NoteContentType.MARKDOWN && !dto.markdownContent) {
-      throw new BadRequestException(
-        'markdownContent is required when contentType is MARKDOWN',
-      );
-    }
-
-    if (contentType === NoteContentType.JSON && !dto.jsonContent) {
-      throw new BadRequestException(
-        'jsonContent is required when contentType is JSON',
-      );
-    }
-  }
 
   private buildRawSearchWhereSql(
     query: SearchNotesDto,

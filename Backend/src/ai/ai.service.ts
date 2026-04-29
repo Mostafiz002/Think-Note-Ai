@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { AiNoteRequestDto } from './dto/ai-note-request.dto';
 import { GeminiProvider } from './gemini.provider';
@@ -12,12 +12,29 @@ type AiOutput = {
 
 @Injectable()
 export class AiService {
+  private logger = new Logger(AiService.name);
+  // Simple in-memory rate limiting (per-user request count)
+  // In production, use Redis or a database
+  private requestCounts = new Map<number, number>();
+  private readonly MAX_REQUESTS = 20;
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly geminiProvider: GeminiProvider,
   ) {}
 
+  private checkLimit(userId: number) {
+    const current = this.requestCounts.get(userId) ?? 0;
+    if (current >= this.MAX_REQUESTS) {
+      throw new ForbiddenException(
+        `AI limit reached (${this.MAX_REQUESTS} requests). Please try again later.`,
+      );
+    }
+    this.requestCounts.set(userId, current + 1);
+  }
+
   async summarizeNote(dto: AiNoteRequestDto, userId: number) {
+    this.checkLimit(userId);
     const note = await this.getOwnedNote(dto.noteId, userId);
     const prompt = this.buildPrompt('summarize', note.title, this.getContent(note), dto.instruction);
     const result = await this.geminiProvider.generateJson<AiOutput>(prompt);
@@ -38,6 +55,7 @@ export class AiService {
   }
 
   async rewriteNote(dto: AiNoteRequestDto, userId: number) {
+    this.checkLimit(userId);
     const note = await this.getOwnedNote(dto.noteId, userId);
     const prompt = this.buildPrompt('rewrite', note.title, this.getContent(note), dto.instruction);
     const result = await this.geminiProvider.generateJson<AiOutput>(prompt);
@@ -49,6 +67,7 @@ export class AiService {
   }
 
   async generateTitle(dto: AiNoteRequestDto, userId: number) {
+    this.checkLimit(userId);
     const note = await this.getOwnedNote(dto.noteId, userId);
     const prompt = this.buildPrompt(
       'generate_short_title',
@@ -65,6 +84,7 @@ export class AiService {
   }
 
   async extractKeyPoints(dto: AiNoteRequestDto, userId: number) {
+    this.checkLimit(userId);
     const note = await this.getOwnedNote(dto.noteId, userId);
     const prompt = this.buildPrompt(
       'extract_key_points',

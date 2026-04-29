@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -38,6 +38,20 @@ export class GeminiProvider {
       return JSON.parse(clean) as T;
     } catch (err: any) {
       console.error('GEMINI ERROR:', err);
+
+      const message = err?.message || '';
+      
+      if (message.includes('429') || message.toLowerCase().includes('quota') || message.toLowerCase().includes('rate limit')) {
+        throw new InternalServerErrorException(
+          'AI rate limit reached. Please try again in a few minutes.',
+        );
+      }
+
+      if (message.toLowerCase().includes('safety') || message.toLowerCase().includes('blocked')) {
+        throw new BadRequestException(
+          'The AI declined the request due to safety filters. Please try a different prompt.',
+        );
+      }
 
       throw new InternalServerErrorException(
         err?.message || 'Gemini request failed',

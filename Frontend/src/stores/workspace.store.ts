@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, ApiError } from "@/lib/api"
 import { toast } from "sonner"
 import type { Note, Paginated } from "@/lib/types"
 
@@ -49,7 +49,7 @@ type WorkspaceStore = {
   refreshNotes: (keepSelected?: boolean) => Promise<void>
   fetchActiveNote: (id: number) => Promise<void>
   createNote: () => Promise<void>
-  saveActiveNote: () => Promise<void>
+  saveActiveNote: (isAutosave?: boolean) => Promise<void>
   removeNote: (id: number) => Promise<void>
   moveNote: (noteId: number, folderId: number) => Promise<void>
 }
@@ -219,7 +219,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  saveActiveNote: async () => {
+  saveActiveNote: async (isAutosave = false) => {
     const { selectedNoteId, draftTitle, draftMarkdown } = get()
     if (!selectedNoteId) return
     
@@ -236,8 +236,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         activeNote: updated,
         notes: state.notes.map(n => n.id === updated.id ? { ...n, title: updated.title, updatedAt: updated.updatedAt } : n)
       }))
+      if (!isAutosave) {
+        toast.success("Note saved")
+      }
     } catch (err) {
-      console.error("Autosave failed", err)
+      if (!isAutosave) {
+        toast.error(err instanceof ApiError ? err.message : "Failed to save note")
+      }
+      console.error(isAutosave ? "Autosave failed" : "Save failed", err)
     }
   },
 

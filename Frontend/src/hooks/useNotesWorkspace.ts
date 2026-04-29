@@ -81,7 +81,7 @@ export function useNotesWorkspace(): WorkspaceState {
       if (!last || last.id !== selectedNoteId) return
       if (last.title === draftTitle && last.markdown === draftMarkdown) return
       
-      void saveActiveNote()
+      void saveActiveNote(true)
       lastSavedRef.current = { 
         id: selectedNoteId, 
         title: draftTitle, 

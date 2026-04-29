@@ -11,21 +11,21 @@ import {
 } from 'class-validator';
 
 export class CreateNoteDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  title!: string;
+  title?: string;
 
   @IsOptional()
   @IsEnum(NoteContentType)
   contentType?: NoteContentType;
 
   @ValidateIf((dto: CreateNoteDto) => dto.contentType !== NoteContentType.JSON)
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   markdownContent?: string;
 
   @ValidateIf((dto: CreateNoteDto) => dto.contentType === NoteContentType.JSON)
-  @IsNotEmpty()
+  @IsOptional()
   @IsObject()
   jsonContent?: Record<string, unknown>;
 
