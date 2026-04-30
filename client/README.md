@@ -1,5 +1,7 @@
 # Think Note AI - Frontend 🎨
 
+**Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
+
 The user interface of Think Note AI is built for speed, aesthetics, and a premium user experience. It leverages modern React patterns and the latest Next.js features to provide a seamless "second brain" experience.
 
 ## ✨ Highlights

@@ -1,5 +1,7 @@
 # Think Note AI 🧠✨
 
+**Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
+
 **Think Note AI** is a state-of-the-art, AI-powered note-taking application designed to transform how you organize, synthesize, and interact with your thoughts. Built with a premium aesthetic and powered by Google Gemini AI, it's more than just an editor—it's your second brain.
 
 ---
@@ -94,4 +96,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 **Mostafizur Rahman**
 - GitHub: [@Mostafiz002](https://github.com/Mostafiz002)
-- Portfolio: [mostafiz.dev](https://mostafiz.dev)
+- Portfolio: [mostafiz.dev](https://dev-mostafiz.vercel.app/)

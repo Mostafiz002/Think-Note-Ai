@@ -18,8 +18,6 @@ type AiOutput = {
 @Injectable()
 export class AiService {
   private logger = new Logger(AiService.name);
-  // Simple in-memory rate limiting (per-user request count)
-  // In production, use Redis or a database
   private requestCounts = new Map<number, number>();
   private readonly MAX_REQUESTS = 20;
 

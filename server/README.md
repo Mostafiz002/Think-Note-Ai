@@ -1,5 +1,7 @@
 # Think Note AI - Backend ⚙️
 
+**Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
+
 The robust backbone of Think Note AI, built with NestJS and Prisma. It handles secure data persistence, AI orchestration, and multi-user synchronization.
 
 ## ✨ Highlights
