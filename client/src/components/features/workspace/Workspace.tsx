@@ -125,7 +125,7 @@ export function Workspace() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 size-7 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity cursor-pointer"
+                      className="absolute right-2 top-3 size-7 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();

@@ -19,6 +19,7 @@ import { ListNotesDto } from './dto/list-notes.dto';
 import { MoveNoteFolderDto } from './dto/move-note-folder.dto';
 import { LinkNoteDto } from './dto/link-note.dto';
 import { SearchNotesDto } from './dto/search-notes.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('api/v1/notes')
 export class NoteController {

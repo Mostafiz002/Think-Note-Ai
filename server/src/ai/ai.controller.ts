@@ -1,10 +1,12 @@
 import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AiService } from './ai.service';
 import { AiNoteRequestDto } from './dto/ai-note-request.dto';
 
 @Controller('api/v1/ai')
 @UseGuards(AuthGuard)
+@Throttle({ ai: { limit: 5, ttl: 60000 } })
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 

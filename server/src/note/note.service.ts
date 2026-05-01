@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
@@ -12,11 +13,17 @@ import { Note, NoteContentType, Prisma } from '../../generated/prisma/client';
 import { ListNotesDto } from './dto/list-notes.dto';
 import { MoveNoteFolderDto } from './dto/move-note-folder.dto';
 import { SearchNotesDto } from './dto/search-notes.dto';
+import Redis from 'ioredis';
 
 @Injectable()
 export class NoteService {
   private logger = new Logger(NoteService.name);
-  constructor(private readonly prismaService: PrismaService) {}
+  private readonly CACHE_TTL = 3600; // 1 hour
+
+  constructor(
+    private readonly prismaService: PrismaService,
+    @Inject('REDIS_CLIENT') private readonly redis: Redis,
+  ) {}
 
   async create(createNoteDto: CreateNoteDto, userId: number) {
     const contentType = createNoteDto.contentType ?? NoteContentType.MARKDOWN;
@@ -49,10 +56,22 @@ export class NoteService {
     });
 
     this.logger.log('New note has been created');
+    
+    // Invalidate list cache
+    await this.invalidateUserCache(userId);
+    
     return note;
   }
 
   async findAll(query: ListNotesDto, userId: number) {
+    const cacheKey = `user:${userId}:notes:${JSON.stringify(query)}`;
+    const cached = await this.redis.get(cacheKey);
+    
+    if (cached) {
+      this.logger.log(`Serving notes from cache for user ${userId}`);
+      return JSON.parse(cached);
+    }
+
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
@@ -74,7 +93,7 @@ export class NoteService {
       this.prismaService.note.count({ where }),
     ]);
 
-    return {
+    const result = {
       items,
       pagination: {
         page,
@@ -83,9 +102,162 @@ export class NoteService {
         totalPages: Math.ceil(total / limit) || 1,
       },
     };
+
+    // Cache the result
+    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', this.CACHE_TTL);
+    
+    return result;
   }
 
+  async findOne(id: number, userId: number) {
+    const cacheKey = `user:${userId}:note:${id}`;
+    const cached = await this.redis.get(cacheKey);
+
+    if (cached) {
+      this.logger.log(`Serving note ${id} from cache`);
+      return JSON.parse(cached);
+    }
+
+    const note = await this.ensureOwnership(id, userId);
+    
+    await this.redis.set(cacheKey, JSON.stringify(note), 'EX', this.CACHE_TTL);
+    
+    return note;
+  }
+
+  async update(id: number, updateNoteDto: UpdateNoteDto, userId: number) {
+    const note = await this.ensureOwnership(id, userId);
+    const contentType = updateNoteDto.contentType ?? note.contentType;
+
+    if (updateNoteDto.folderId) {
+      await this.ensureFolderOwnership(updateNoteDto.folderId, userId);
+    }
+
+    const data: Prisma.NoteUncheckedUpdateInput = {
+      title:
+        updateNoteDto.title !== undefined
+          ? updateNoteDto.title.trim() || 'Untitled'
+          : undefined,
+      contentType,
+      folderId: updateNoteDto.folderId,
+    };
+
+    if (contentType === NoteContentType.MARKDOWN) {
+      if (updateNoteDto.markdownContent !== undefined) {
+        data.markdownContent = updateNoteDto.markdownContent ?? '';
+        data.body = updateNoteDto.markdownContent ?? '';
+      }
+      data.jsonContent = Prisma.JsonNull;
+    } else {
+      data.body = null;
+      data.markdownContent = null;
+      if (updateNoteDto.jsonContent !== undefined) {
+        data.jsonContent = (updateNoteDto.jsonContent ??
+          {}) as Prisma.InputJsonValue;
+      }
+    }
+
+    const updated = await this.prismaService.note.update({
+      where: { id },
+      data,
+    });
+
+    // Invalidate caches
+    await this.invalidateUserCache(userId, id);
+
+    return updated;
+  }
+
+  async remove(id: number, userId: number) {
+    await this.ensureOwnership(id, userId);
+    await this.prismaService.note.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    
+    // Invalidate caches
+    await this.invalidateUserCache(userId, id);
+    
+    return 'Moved to trash';
+  }
+
+  // --- Helper Methods ---
+
+  private async invalidateUserCache(userId: number, noteId?: number) {
+    // 1. Delete all note list caches for this user
+    // We use a pattern to find all keys like user:1:notes:*
+    const keys = await this.redis.keys(`user:${userId}:notes:*`);
+    if (keys.length > 0) {
+      await this.redis.del(...keys);
+    }
+
+    // 2. Delete specific note cache if provided
+    if (noteId) {
+      await this.redis.del(`user:${userId}:note:${noteId}`);
+    }
+    
+    this.logger.log(`Invalidated cache for user ${userId}${noteId ? ` and note ${noteId}` : ''}`);
+  }
+
+  private async ensureOwnership(id: number, userId: number): Promise<Note> {
+    const note = await this.prismaService.note.findFirst({
+      where: { id },
+      include: {
+        folder: true,
+        noteTags: {
+          include: { tag: true },
+        },
+        outgoingLinks: {
+          include: {
+            targetNote: {
+              select: { id: true, title: true },
+            },
+          },
+        },
+        incomingLinks: {
+          include: {
+            sourceNote: {
+              select: { id: true, title: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!note) throw new NotFoundException('Note not Found');
+    if (note.userId !== userId) throw new ForbiddenException('Not Allowed!');
+
+    return note;
+  }
+
+  private buildListWhereInput(
+    query: ListNotesDto,
+    userId: number,
+  ): Prisma.NoteWhereInput {
+    const includeArchived = query.includeArchived ?? false;
+    const includeTrashed = query.includeTrashed ?? false;
+    const search = query.search?.trim();
+
+    return {
+      userId,
+      archivedAt: includeArchived ? undefined : null,
+      deletedAt: includeTrashed ? undefined : null,
+      contentType: query.contentType,
+      folderId: query.folderId,
+      OR: search
+        ? [
+            { title: { contains: search } },
+            { markdownContent: { contains: search } },
+          ]
+        : undefined,
+    };
+  }
+
+  // ... (Other methods remain same)
+  
   async search(query: SearchNotesDto, userId: number) {
+    // Search is usually too dynamic for simple caching, 
+    // but you could cache it here if needed using the same logic as findAll.
     const term = query.q?.trim();
     if (!term) throw new BadRequestException('q is required for search');
 
@@ -96,7 +268,7 @@ export class NoteService {
     const where = this.buildRawSearchWhereSql(query, userId, pattern);
 
     const [items, countRows] = await this.prismaService.$transaction([
-      this.prismaService.$queryRaw<SearchResultRow[]>(Prisma.sql`
+      this.prismaService.$queryRaw<any[]>(Prisma.sql`
         SELECT
           n.id,
           n.title,
@@ -146,65 +318,44 @@ export class NoteService {
     };
   }
 
-  async findOne(id: number, userId: number) {
-    const note = await this.ensureOwnership(id, userId);
-    return note;
+  private buildRawSearchWhereSql(
+    query: SearchNotesDto,
+    userId: number,
+    pattern: string,
+  ) {
+    const filters: Prisma.Sql[] = [
+      Prisma.sql`n.userId = ${userId}`,
+      Prisma.sql`(lower(n.title) LIKE ${pattern} OR lower(coalesce(n.markdownContent, '')) LIKE ${pattern})`,
+    ];
+
+    if (!query.includeArchived) filters.push(Prisma.sql`n.archivedAt IS NULL`);
+    if (!query.includeTrashed) filters.push(Prisma.sql`n.deletedAt IS NULL`);
+    if (query.contentType)
+      filters.push(Prisma.sql`n.contentType = ${query.contentType}`);
+    if (query.folderId)
+      filters.push(Prisma.sql`n.folderId = ${query.folderId}`);
+
+    return Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
   }
-
-  async update(id: number, updateNoteDto: UpdateNoteDto, userId: number) {
-    const note = await this.ensureOwnership(id, userId);
-    const contentType = updateNoteDto.contentType ?? note.contentType;
-
-    if (updateNoteDto.folderId) {
-      await this.ensureFolderOwnership(updateNoteDto.folderId, userId);
-    }
-
-    const data: Prisma.NoteUncheckedUpdateInput = {
-      title:
-        updateNoteDto.title !== undefined
-          ? updateNoteDto.title.trim() || 'Untitled'
-          : undefined,
-      contentType,
-      folderId: updateNoteDto.folderId,
-    };
-
-    if (contentType === NoteContentType.MARKDOWN) {
-      if (updateNoteDto.markdownContent !== undefined) {
-        data.markdownContent = updateNoteDto.markdownContent ?? '';
-        data.body = updateNoteDto.markdownContent ?? '';
-      }
-      data.jsonContent = Prisma.JsonNull;
-    } else {
-      data.body = null;
-      data.markdownContent = null;
-      if (updateNoteDto.jsonContent !== undefined) {
-        data.jsonContent = (updateNoteDto.jsonContent ??
-          {}) as Prisma.InputJsonValue;
-      }
-    }
-
-    const updated = await this.prismaService.note.update({
-      where: { id },
-      data,
-    });
-
-    return updated;
-  }
-
+  
   async archive(id: number, userId: number) {
     await this.ensureOwnership(id, userId);
-    return this.prismaService.note.update({
+    const res = await this.prismaService.note.update({
       where: { id },
       data: { archivedAt: new Date() },
     });
+    await this.invalidateUserCache(userId, id);
+    return res;
   }
 
   async unarchive(id: number, userId: number) {
     await this.ensureOwnership(id, userId);
-    return this.prismaService.note.update({
+    const res = await this.prismaService.note.update({
       where: { id },
       data: { archivedAt: null },
     });
+    await this.invalidateUserCache(userId, id);
+    return res;
   }
 
   async moveToFolder(
@@ -217,7 +368,7 @@ export class NoteService {
       await this.ensureFolderOwnership(moveNoteFolderDto.folderId, userId);
     }
 
-    return this.prismaService.note.update({
+    const res = await this.prismaService.note.update({
       where: { id: noteId },
       data: { folderId: moveNoteFolderDto.folderId ?? null },
       include: {
@@ -225,23 +376,18 @@ export class NoteService {
         noteTags: { include: { tag: true } },
       },
     });
-  }
-
-  async remove(id: number, userId: number) {
-    await this.ensureOwnership(id, userId);
-    await this.prismaService.note.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-    return 'Moved to trash';
+    await this.invalidateUserCache(userId, noteId);
+    return res;
   }
 
   async restore(id: number, userId: number) {
     await this.ensureOwnership(id, userId);
-    return this.prismaService.note.update({
+    const res = await this.prismaService.note.update({
       where: { id },
       data: { deletedAt: null },
     });
+    await this.invalidateUserCache(userId, id);
+    return res;
   }
 
   async attachTag(noteId: number, tagId: number, userId: number) {
@@ -254,7 +400,53 @@ export class NoteService {
       create: { noteId, tagId },
     });
 
-    return this.findOneWithTags(noteId, userId);
+    const res = await this.findOneWithTags(noteId, userId);
+    await this.invalidateUserCache(userId, noteId);
+    return res;
+  }
+
+  async detachTag(noteId: number, tagId: number, userId: number) {
+    await this.ensureOwnership(noteId, userId);
+    await this.ensureTagOwnership(tagId, userId);
+
+    await this.prismaService.noteTag.deleteMany({
+      where: { noteId, tagId },
+    });
+
+    const res = await this.findOneWithTags(noteId, userId);
+    await this.invalidateUserCache(userId, noteId);
+    return res;
+  }
+
+  private async findOneWithTags(id: number, userId: number) {
+    const note = await this.prismaService.note.findFirst({
+      where: { id, userId },
+      include: {
+        folder: true,
+        noteTags: {
+          include: { tag: true },
+        },
+      },
+    });
+
+    if (!note) throw new NotFoundException('Note not Found');
+    return note;
+  }
+  
+  private async ensureTagOwnership(tagId: number, userId: number) {
+    const tag = await this.prismaService.tag.findFirst({
+      where: { id: tagId },
+    });
+    if (!tag) throw new NotFoundException('Tag not found');
+    if (tag.userId !== userId) throw new ForbiddenException('Not Allowed!');
+  }
+
+  private async ensureFolderOwnership(folderId: number, userId: number) {
+    const folder = await this.prismaService.folder.findFirst({
+      where: { id: folderId },
+    });
+    if (!folder) throw new NotFoundException('Folder not found');
+    if (folder.userId !== userId) throw new ForbiddenException('Not Allowed!');
   }
 
   async getLinks(noteId: number, userId: number) {
@@ -306,7 +498,9 @@ export class NoteService {
       create: { sourceNoteId, targetNoteId },
     });
 
-    return this.getLinks(sourceNoteId, userId);
+    const res = await this.getLinks(sourceNoteId, userId);
+    await this.invalidateUserCache(userId, sourceNoteId);
+    return res;
   }
 
   async unlinkNote(sourceNoteId: number, targetNoteId: number, userId: number) {
@@ -317,150 +511,8 @@ export class NoteService {
       where: { sourceNoteId, targetNoteId },
     });
 
-    return this.getLinks(sourceNoteId, userId);
-  }
-
-  async detachTag(noteId: number, tagId: number, userId: number) {
-    await this.ensureOwnership(noteId, userId);
-    await this.ensureTagOwnership(tagId, userId);
-
-    await this.prismaService.noteTag.deleteMany({
-      where: { noteId, tagId },
-    });
-
-    return this.findOneWithTags(noteId, userId);
-  }
-
-  private async ensureOwnership(id: number, userId: number): Promise<Note> {
-    const note = await this.prismaService.note.findFirst({
-      where: { id },
-      include: {
-        folder: true,
-        noteTags: {
-          include: { tag: true },
-        },
-        outgoingLinks: {
-          include: {
-            targetNote: {
-              select: { id: true, title: true },
-            },
-          },
-        },
-        incomingLinks: {
-          include: {
-            sourceNote: {
-              select: { id: true, title: true },
-            },
-          },
-        },
-      },
-    });
-
-    if (!note) throw new NotFoundException('Note not Found');
-    if (note.userId !== userId) throw new ForbiddenException('Not Allowed!');
-
-    return note;
-  }
-
-  private async findOneWithTags(id: number, userId: number) {
-    const note = await this.prismaService.note.findFirst({
-      where: { id, userId },
-      include: {
-        folder: true,
-        noteTags: {
-          include: { tag: true },
-        },
-        outgoingLinks: {
-          include: {
-            targetNote: {
-              select: { id: true, title: true },
-            },
-          },
-        },
-        incomingLinks: {
-          include: {
-            sourceNote: {
-              select: { id: true, title: true },
-            },
-          },
-        },
-      },
-    });
-
-    if (!note) throw new NotFoundException('Note not Found');
-    return note;
-  }
-
-  private async ensureTagOwnership(tagId: number, userId: number) {
-    const tag = await this.prismaService.tag.findFirst({
-      where: { id: tagId },
-    });
-    if (!tag) throw new NotFoundException('Tag not found');
-    if (tag.userId !== userId) throw new ForbiddenException('Not Allowed!');
-  }
-
-  private async ensureFolderOwnership(folderId: number, userId: number) {
-    const folder = await this.prismaService.folder.findFirst({
-      where: { id: folderId },
-    });
-    if (!folder) throw new NotFoundException('Folder not found');
-    if (folder.userId !== userId) throw new ForbiddenException('Not Allowed!');
-  }
-
-  private buildListWhereInput(
-    query: ListNotesDto,
-    userId: number,
-  ): Prisma.NoteWhereInput {
-    const includeArchived = query.includeArchived ?? false;
-    const includeTrashed = query.includeTrashed ?? false;
-    const search = query.search?.trim();
-
-    return {
-      userId,
-      archivedAt: includeArchived ? undefined : null,
-      deletedAt: includeTrashed ? undefined : null,
-      contentType: query.contentType,
-      folderId: query.folderId,
-      OR: search
-        ? [
-            { title: { contains: search } },
-            { markdownContent: { contains: search } },
-          ]
-        : undefined,
-    };
-  }
-
-  private buildRawSearchWhereSql(
-    query: SearchNotesDto,
-    userId: number,
-    pattern: string,
-  ) {
-    const filters: Prisma.Sql[] = [
-      Prisma.sql`n.userId = ${userId}`,
-      Prisma.sql`(lower(n.title) LIKE ${pattern} OR lower(coalesce(n.markdownContent, '')) LIKE ${pattern})`,
-    ];
-
-    if (!query.includeArchived) filters.push(Prisma.sql`n.archivedAt IS NULL`);
-    if (!query.includeTrashed) filters.push(Prisma.sql`n.deletedAt IS NULL`);
-    if (query.contentType)
-      filters.push(Prisma.sql`n.contentType = ${query.contentType}`);
-    if (query.folderId)
-      filters.push(Prisma.sql`n.folderId = ${query.folderId}`);
-
-    return Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
+    const res = await this.getLinks(sourceNoteId, userId);
+    await this.invalidateUserCache(userId, sourceNoteId);
+    return res;
   }
 }
-
-type SearchResultRow = {
-  id: number;
-  title: string;
-  contentType: NoteContentType;
-  markdownContent: string | null;
-  archivedAt: Date | null;
-  deletedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  userId: number;
-  folderId: number | null;
-  score: number;
-};
