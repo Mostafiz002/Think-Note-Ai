@@ -1,10 +1,42 @@
 -- CreateTable
+CREATE TABLE "User" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "refreshTokenHash" TEXT,
+    "updatedAt" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
 CREATE TABLE "EmailOtp" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "email" TEXT NOT NULL,
     "codeHash" TEXT NOT NULL,
     "expiresAt" DATETIME NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "Note" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL,
+    "body" TEXT,
+    "contentType" TEXT NOT NULL DEFAULT 'MARKDOWN',
+    "markdownContent" TEXT,
+    "jsonContent" JSONB,
+    "summary" TEXT,
+    "keyPoints" JSONB,
+    "archivedAt" DATETIME,
+    "deletedAt" DATETIME,
+    "updatedAt" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" INTEGER NOT NULL,
+    "folderId" INTEGER,
+    CONSTRAINT "Note_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Note_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "Folder" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -52,53 +84,23 @@ CREATE TABLE "NoteTag" (
     CONSTRAINT "NoteTag_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "Tag" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_Note" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "title" TEXT NOT NULL,
-    "body" TEXT,
-    "contentType" TEXT NOT NULL DEFAULT 'MARKDOWN',
-    "markdownContent" TEXT,
-    "jsonContent" JSONB,
-    "summary" TEXT,
-    "keyPoints" JSONB,
-    "archivedAt" DATETIME,
-    "deletedAt" DATETIME,
-    "updatedAt" DATETIME NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "userId" INTEGER NOT NULL,
-    "folderId" INTEGER,
-    CONSTRAINT "Note_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Note_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "Folder" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-INSERT INTO "new_Note" ("body", "createdAt", "id", "title", "updatedAt", "userId") SELECT "body", "createdAt", "id", "title", "updatedAt", "userId" FROM "Note";
-DROP TABLE "Note";
-ALTER TABLE "new_Note" RENAME TO "Note";
-CREATE INDEX "Note_userId_createdAt_idx" ON "Note"("userId", "createdAt" DESC);
-CREATE INDEX "Note_userId_archivedAt_idx" ON "Note"("userId", "archivedAt");
-CREATE INDEX "Note_userId_deletedAt_idx" ON "Note"("userId", "deletedAt");
-CREATE INDEX "Note_folderId_idx" ON "Note"("folderId");
-CREATE TABLE "new_User" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "name" TEXT,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
-    "refreshTokenHash" TEXT,
-    "updatedAt" DATETIME NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-INSERT INTO "new_User" ("createdAt", "email", "id", "name", "password", "updatedAt") SELECT "createdAt", "email", "id", "name", "password", "updatedAt" FROM "User";
-DROP TABLE "User";
-ALTER TABLE "new_User" RENAME TO "User";
+-- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
 
 -- CreateIndex
 CREATE INDEX "EmailOtp_email_expiresAt_idx" ON "EmailOtp"("email", "expiresAt");
+
+-- CreateIndex
+CREATE INDEX "Note_userId_createdAt_idx" ON "Note"("userId", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "Note_userId_archivedAt_idx" ON "Note"("userId", "archivedAt");
+
+-- CreateIndex
+CREATE INDEX "Note_userId_deletedAt_idx" ON "Note"("userId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "Note_folderId_idx" ON "Note"("folderId");
 
 -- CreateIndex
 CREATE INDEX "NoteLink_targetNoteId_idx" ON "NoteLink"("targetNoteId");
