@@ -528,7 +528,7 @@ export function Workspace() {
                 value={ws.draftMarkdown ?? ""}
                 onChange={(e) => ws.setDraftMarkdown(e.target.value)}
                 placeholder="Start writing..."
-                className="min-h-[500px]  custom-scrollbar dark:text-[#bbbbb9] w-full resize-none border-none bg-transparent p-0 text-base leading-relaxed shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/20"
+                className="min-h-[500px] pb-10! custom-scrollbar dark:text-[#bbbbb9] w-full resize-none border-none bg-transparent p-0 text-base leading-relaxed shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/20"
               />
             </div>
           </main>

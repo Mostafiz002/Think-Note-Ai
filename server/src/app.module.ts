@@ -16,6 +16,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RedisModule } from './common/redis/redis.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { HealthController } from './health/health.controller';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -40,8 +42,9 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     FolderModule,
     AiModule,
     MailModule,
+    HealthModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [
     AppService,
     {
