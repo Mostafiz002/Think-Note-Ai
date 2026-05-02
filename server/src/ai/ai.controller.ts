@@ -45,6 +45,7 @@ export class AiController {
     @Request() req: { user: { sub: number } },
     @UploadedFiles() files?: Express.Multer.File[],
   ) {
+    console.log('AI CHAT ENDPOINT HIT:', { instruction: dto.instruction, noteId: dto.noteId, filesCount: files?.length });
     return this.aiService.chat(
       dto.instruction,
       req.user.sub,

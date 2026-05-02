@@ -126,7 +126,7 @@ export async function apiFetch<T>(
     data: init?.body,
     headers: {
       ...init?.headers,
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(isFormData ? { "Content-Type": undefined } : { "Content-Type": "application/json" }),
     },
   })
 

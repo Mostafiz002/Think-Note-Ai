@@ -88,6 +88,51 @@ export class GeminiProvider {
     }
   }
 
+  /**
+   * Generates a structured JSON response from a prompt with optional file attachments.
+   * Useful for agentic chat where the AI needs to return text AND proposed actions (like updating a note).
+   */
+  async generateWithAttachmentsJson<T>(
+    prompt: string,
+    attachments: FileAttachment[] = [],
+  ): Promise<T> {
+    const model = this.client.getGenerativeModel({ model: this.model });
+
+    try {
+      const parts: Part[] = [];
+
+      for (const file of attachments) {
+        parts.push({
+          inlineData: {
+            mimeType: file.mimeType,
+            data: file.buffer.toString('base64'),
+          },
+        });
+      }
+
+      parts.push({ text: prompt });
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const raw = result.response.text().trim();
+      const stripped = raw
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+
+      const firstJson = this.extractFirstJson(stripped);
+      return JSON.parse(firstJson) as T;
+    } catch (err: any) {
+      this.handleGeminiError(err);
+    }
+  }
+
   // ─── Shared error handler ────────────────────────────────────────────────
 
   private handleGeminiError(err: any): never {

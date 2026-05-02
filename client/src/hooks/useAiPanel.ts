@@ -3,6 +3,7 @@
 import * as React from "react"
 import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
+import { useWorkspaceStore } from "@/stores/workspace.store"
 
 type AiAction = "summarize" | "rewrite" | "generate-title" | "key-points" | "chat"
 
@@ -26,6 +27,7 @@ const MAX_PDF_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES = 3
 
 export function useAiPanel(): AiState {
+  const ws = useWorkspaceStore()
   const [running, setRunning] = React.useState<AiAction | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [summary, setSummary] = React.useState<string | null>(null)
@@ -87,10 +89,12 @@ export function useAiPanel(): AiState {
         if (action === "summarize") {
           const s = (data as { summary?: unknown }).summary
           setSummary(typeof s === "string" ? s : null)
+          if (args.noteId) await ws.fetchActiveNote(args.noteId)
         }
         if (action === "key-points") {
           const kp = (data as { keyPoints?: unknown }).keyPoints
           setKeyPoints(Array.isArray(kp) ? kp.filter((x) => typeof x === "string") : null)
+          if (args.noteId) await ws.fetchActiveNote(args.noteId)
         }
         toast.success(`${action.replace("-", " ")} completed`)
         return data
@@ -133,6 +137,13 @@ export function useAiPanel(): AiState {
 
         setChatResponse(data.response)
         setAttachments([]) // Clear attachments on success
+
+        if (args.noteId) {
+          // If the AI updated the note, we need to refresh the UI
+          await ws.fetchActiveNote(args.noteId)
+          await ws.refreshNotes(true)
+        }
+
         toast.success("AI response received")
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Chat request failed"

@@ -14,7 +14,7 @@ import {
   Trash2,
   MoreVertical,
   Paperclip,
-  ImageIcon,
+  Image as ImageIcon,
   FileText,
   Send,
   X,
@@ -296,32 +296,39 @@ export function Workspace() {
                         AI Studio
                       </span>
                     </div>
-                    
+
                     <div className="relative flex-1 flex items-center gap-2">
                       <input
                         type="file"
                         id="ai-attachments"
                         multiple
                         className="hidden"
-                        onChange={(e) => e.target.files && ai.addAttachments(e.target.files)}
+                        onChange={(e) =>
+                          e.target.files && ai.addAttachments(e.target.files)
+                        }
                         accept="image/*,application/pdf"
                       />
                       <Button
                         variant="ghost"
                         size="icon"
                         className="size-8 shrink-0 text-muted-foreground hover:text-primary"
-                        onClick={() => document.getElementById("ai-attachments")?.click()}
+                        onClick={() =>
+                          document.getElementById("ai-attachments")?.click()
+                        }
                       >
                         <Paperclip className="size-4" />
                       </Button>
-                      
+
                       <Input
                         value={instruction}
                         onChange={(e) => setInstruction(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
-                            void ai.chat({ instruction, noteId: ws.selectedId ?? undefined });
+                            void ai.chat({
+                              instruction,
+                              noteId: ws.selectedId ?? undefined,
+                            });
                             setInstruction("");
                           }
                         }}
@@ -334,7 +341,10 @@ export function Workspace() {
                         variant="ghost"
                         disabled={ai.running !== null || !instruction.trim()}
                         onClick={() => {
-                          void ai.chat({ instruction, noteId: ws.selectedId ?? undefined });
+                          void ai.chat({
+                            instruction,
+                            noteId: ws.selectedId ?? undefined,
+                          });
                           setInstruction("");
                         }}
                         className="size-8 shrink-0 text-primary hover:bg-primary/10"
@@ -352,15 +362,22 @@ export function Workspace() {
                   {ai.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-2 px-1">
                       {ai.attachments.map((file, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2 py-1 text-[10px] group">
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2 py-1 text-[10px] group"
+                        >
                           {file.type.startsWith("image/") ? (
                             <ImageIcon className="size-3 text-primary/60" />
                           ) : (
                             <FileText className="size-3 text-primary/60" />
                           )}
-                          <span className="max-w-[100px] truncate font-medium">{file.name}</span>
-                          <span className="text-[9px] text-muted-foreground">({(file.size / (1024 * 1024)).toFixed(1)}MB)</span>
-                          <button 
+                          <span className="max-w-[100px] truncate font-medium">
+                            {file.name}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">
+                            ({(file.size / (1024 * 1024)).toFixed(1)}MB)
+                          </span>
+                          <button
                             onClick={() => ai.removeAttachment(i)}
                             className="ml-1 rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
                           >
@@ -446,7 +463,7 @@ export function Workspace() {
                   const currentKeyPoints =
                     ai.keyPoints || (ws.active?.keyPoints as string[]);
                   const currentChatResponse = ai.chatResponse;
-                  
+
                   const hasData =
                     currentSummary ||
                     (currentKeyPoints && currentKeyPoints.length > 0) ||
@@ -461,7 +478,7 @@ export function Workspace() {
                           {ai.error}
                         </div>
                       )}
-                      
+
                       {currentChatResponse && (
                         <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 text-[13px] leading-relaxed text-foreground/90 shadow-inner">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-tighter text-primary flex items-center gap-2">
@@ -469,7 +486,9 @@ export function Workspace() {
                             AI Assistant
                             <div className="h-px flex-1 bg-primary/10" />
                           </div>
-                          <div className="whitespace-pre-wrap">{currentChatResponse}</div>
+                          <div className="whitespace-pre-wrap">
+                            {currentChatResponse}
+                          </div>
                         </div>
                       )}
 
@@ -509,7 +528,7 @@ export function Workspace() {
                 value={ws.draftMarkdown ?? ""}
                 onChange={(e) => ws.setDraftMarkdown(e.target.value)}
                 placeholder="Start writing..."
-                className="min-h-[500px] dark:text-[#bbbbb9] w-full resize-none border-none bg-transparent p-0 text-base leading-relaxed shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/20"
+                className="min-h-[500px]  custom-scrollbar dark:text-[#bbbbb9] w-full resize-none border-none bg-transparent p-0 text-base leading-relaxed shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/20"
               />
             </div>
           </main>

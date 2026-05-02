@@ -55,10 +55,26 @@ export class AiService {
       prompt += `Here is the context of the user's note:\n\nTitle: ${note.title}\nContent:\n${content}\n\n---\n\n`;
     }
 
-    prompt += `User instruction: ${instruction}`;
+    prompt += `User instruction: ${instruction}\n\n`;
+
+    prompt += `Return your response in the following JSON format:
+{
+  "response": "Your friendly chat response. Confirm any note updates made.",
+  "updateNote": {
+    "title": "Optional new title if requested",
+    "content": "The COMPLETE updated markdown content of the note. Analyze the existing content and integrate new information naturally. Do not just append the instruction; weave it into the context intelligently."
+  }
+}
+If no update is requested, set "updateNote" to null.
+Rules:
+- Analyze attached files (images/PDFs) carefully and use their content to fulfill the request.
+- Return ONLY valid JSON.
+- Do not include markdown fences in the JSON output.
+- If updating content, provide the FULL new content.
+- Be an intelligent assistant, not a simple text-append tool.`;
 
     if (files && files.length > 0) {
-      prompt += `\n\nThe user has attached ${files.length} file(s). Please analyze them carefully and incorporate your findings into your response.`;
+      prompt += `\n\nThe user has attached ${files.length} file(s). Please analyze them carefully.`;
     }
 
     // Convert Multer files to our FileAttachment format
@@ -72,12 +88,28 @@ export class AiService {
       `AI Chat: user=${userId}, noteId=${noteId ?? 'none'}, files=${attachments.length}, instructionLen=${instruction.length}`,
     );
 
-    const response = await this.geminiProvider.generateWithAttachments(
-      prompt,
-      attachments,
-    );
+    const result = await this.geminiProvider.generateWithAttachmentsJson<{
+      response: string;
+      updateNote?: { title?: string; content?: string };
+    }>(prompt, attachments);
 
-    return { response };
+    // Apply updates if the AI proposed them and we have a noteId
+    if (result.updateNote && noteId) {
+      const { title, content } = result.updateNote;
+      const data: any = {};
+      if (title) data.title = title;
+      if (content) data.markdownContent = content;
+
+      if (Object.keys(data).length > 0) {
+        await this.prismaService.note.update({
+          where: { id: noteId },
+          data,
+        });
+        this.logger.log(`AI Chat: Applied updates to note ${noteId}`);
+      }
+    }
+
+    return { response: result.response };
   }
 
   // ─── Existing: Quick Actions ─────────────────────────────────────────────

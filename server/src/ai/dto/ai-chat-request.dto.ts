@@ -12,4 +12,7 @@ export class AiChatRequestDto {
   @IsInt()
   @Min(1)
   noteId?: number;
+
+  @IsOptional()
+  files?: any;
 }
