@@ -10,9 +10,7 @@ export class GeminiProvider {
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
-      throw new InternalServerErrorException(
-        'GEMINI_API_KEY is not configured',
-      );
+      throw new InternalServerErrorException('GEMINI_API_KEY is not configured');
     }
     this.client = new GoogleGenerativeAI(apiKey);
   }
@@ -30,38 +28,87 @@ export class GeminiProvider {
 
       const raw = result.response.text().trim();
 
-      const clean = raw
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
+      // Strip any markdown code fences the model may wrap around JSON
+      const stripped = raw
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```\s*$/i, '')
         .trim();
 
-      return JSON.parse(clean) as T;
+      // Gemini can occasionally return multiple concatenated JSON objects.
+      // We extract only the first complete JSON structure as a defensive measure.
+      const firstJson = this.extractFirstJson(stripped);
+
+      return JSON.parse(firstJson) as T;
     } catch (err: any) {
       console.error('GEMINI ERROR:', err);
 
-      const message = err?.message || '';
-      
-      if (message.includes('429') || message.toLowerCase().includes('quota') || message.toLowerCase().includes('rate limit')) {
+      const status = err?.status as number | undefined;
+      const message: string = err?.message || '';
+
+      // 429 / quota exceeded
+      if (status === 429 || message.includes('429') || message.toLowerCase().includes('quota') || message.toLowerCase().includes('rate limit')) {
         throw new InternalServerErrorException(
           'AI rate limit reached. Please try again in a few minutes.',
         );
       }
 
-      if (message.includes('503') || message.toLowerCase().includes('overloaded') || message.toLowerCase().includes('high demand')) {
+      // 503 / model overloaded
+      if (status === 503 || message.includes('503') || message.toLowerCase().includes('overloaded') || message.toLowerCase().includes('high demand')) {
         throw new InternalServerErrorException(
-          'AI servers are currently overloaded due to high demand. Please try again in a few seconds.',
+          'AI servers are currently overloaded. Please try again in a few seconds.',
         );
       }
 
+      // Safety filter triggered
       if (message.toLowerCase().includes('safety') || message.toLowerCase().includes('blocked')) {
         throw new BadRequestException(
           'The AI declined the request due to safety filters. Please try a different prompt.',
         );
       }
 
+      // JSON parse errors — model returned malformed output
+      if (err instanceof SyntaxError) {
+        throw new InternalServerErrorException(
+          'The AI returned an unexpected response. Please try again.',
+        );
+      }
+
       throw new InternalServerErrorException(
-        err?.message || 'Gemini request failed',
+        message || 'An unexpected AI error occurred.',
       );
     }
+  }
+
+  /**
+   * Extracts the first complete JSON object or array from a string.
+   * This guards against cases where the model concatenates multiple JSON blocks.
+   */
+  private extractFirstJson(text: string): string {
+    const start = text.search(/[{\[]/);
+    if (start === -1) return text; // No JSON found — let JSON.parse throw naturally
+
+    const opener = text[start];
+    const closer = opener === '{' ? '}' : ']';
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+
+      if (escape) { escape = false; continue; }
+      if (ch === '\\' && inString) { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+
+      if (ch === opener) depth++;
+      else if (ch === closer) {
+        depth--;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+
+    return text.slice(start); // Return from start to end if never closed
   }
 }

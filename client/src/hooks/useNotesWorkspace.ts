@@ -88,7 +88,7 @@ export function useNotesWorkspace(): WorkspaceState {
         markdown: draftMarkdown 
       }
     },
-    800,
+    1500,
     [draftTitle, draftMarkdown, selectedNoteId, activeNoteLoading, saveActiveNote]
   )
 
@@ -112,7 +112,7 @@ export function useNotesWorkspace(): WorkspaceState {
     draftMarkdown,
     setDraftMarkdown,
 
-    saving: false, 
+    saving: useWorkspaceStore((s) => s.saving), 
     saveError: null,
 
     refreshList: refreshNotes,

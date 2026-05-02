@@ -1,43 +1,67 @@
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios"
+import axios, {
+  AxiosError,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios"
 
+// ─── Error shape from backend ──────────────────────────────────────────────
+export interface ApiErrorData {
+  statusCode: number
+  error: string     // e.g. "Unauthorized", "Not Found"
+  message: string   // human-readable description
+  path?: string
+  timestamp?: string
+}
+
+// ─── Typed API error class ─────────────────────────────────────────────────
 export class ApiError extends Error {
   status: number
-  data: unknown
+  error: string
+  data: ApiErrorData | unknown
 
-  constructor(message: string, opts: { status: number; data: unknown }) {
+  constructor(message: string, opts: { status: number; error: string; data: ApiErrorData | unknown }) {
     super(message)
     this.name = "ApiError"
     this.status = opts.status
+    this.error = opts.error
     this.data = opts.data
   }
 }
 
-function errorMessageFromData(data: unknown) {
-  if (!data) return null
-  if (typeof data === "string") return data
-  if (typeof data === "object") {
-    const maybe = data as { message?: unknown; error?: unknown }
-    if (typeof maybe.message === "string") return maybe.message
-    if (Array.isArray(maybe.message)) return maybe.message.filter((x) => typeof x === "string").join(", ")
-    if (typeof maybe.error === "string") return maybe.error
+// ─── Extract a clean message from any error response ──────────────────────
+function extractMessage(data: unknown): { message: string; error: string } {
+  if (!data) return { message: "An unexpected error occurred.", error: "Error" }
+
+  if (typeof data === "object" && data !== null) {
+    const d = data as ApiErrorData
+    const message = Array.isArray(d.message)
+      ? (d.message as string[]).join(", ")
+      : d.message ?? "An unexpected error occurred."
+    return { message, error: d.error ?? "Error" }
   }
-  return null
+
+  if (typeof data === "string") return { message: data, error: "Error" }
+
+  return { message: "An unexpected error occurred.", error: "Error" }
 }
 
+// ─── Axios instance ────────────────────────────────────────────────────────
 const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
 })
 
-// Flag to prevent infinite refresh loops
 let isRefreshing = false
 
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean
+    }
 
+    // Attempt a token refresh on 401 (except for auth routes)
     if (
       error.response?.status === 401 &&
       originalRequest &&
@@ -45,7 +69,7 @@ api.interceptors.response.use(
       !originalRequest.url?.startsWith("/api/auth/")
     ) {
       if (isRefreshing) return Promise.reject(error)
-      
+
       isRefreshing = true
       originalRequest._retry = true
 
@@ -53,36 +77,55 @@ api.interceptors.response.use(
         await axios.post("/api/auth/refresh-token")
         isRefreshing = false
         return api(originalRequest)
-      } catch (refreshError) {
+      } catch {
         isRefreshing = false
       }
     }
 
     if (error.response) {
-      const data = error.response.data
-      const msg = errorMessageFromData(data)
-      const apiErr = new ApiError(msg ? `API ${error.response.status}: ${msg}` : `API request failed (${error.response.status})`, {
-        status: error.response.status,
-        data,
-      })
-      return Promise.reject(apiErr)
+      const { message, error: errorLabel } = extractMessage(error.response.data)
+
+      return Promise.reject(
+        new ApiError(message, {
+          status: error.response.status,
+          error: errorLabel,
+          data: error.response.data,
+        })
+      )
+    }
+
+    // Network / timeout errors
+    if (error.request) {
+      return Promise.reject(
+        new ApiError("Network error. Please check your connection.", {
+          status: 0,
+          error: "Network Error",
+          data: null,
+        })
+      )
     }
 
     return Promise.reject(error)
   }
 )
 
+// ─── Generic fetch helper ──────────────────────────────────────────────────
 export async function apiFetch<T>(
   path: string,
-  init?: { method?: string; body?: any; headers?: Record<string, string>; cache?: string }
+  init?: {
+    method?: string
+    body?: unknown
+    headers?: Record<string, string>
+  }
 ): Promise<T> {
   const response = await api.request<T>({
     url: path,
-    method: init?.method || "GET",
+    method: init?.method ?? "GET",
     data: init?.body,
     headers: init?.headers,
   })
-  
+
   return response.data
 }
 
+export default api

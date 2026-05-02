@@ -169,7 +169,7 @@ export function Workspace() {
               <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
                 <PencilLine className="size-3.5" />
                 <span className="truncate opacity-50">Notes /</span>
-                <span className="truncate font-medium text-foreground">
+                <span className="inline-block max-w-[35ch] truncate font-medium text-foreground">
                   {ws.draftTitle || "Untitled"}
                 </span>
               </div>
