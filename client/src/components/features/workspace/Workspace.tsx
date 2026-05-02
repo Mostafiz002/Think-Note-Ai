@@ -13,6 +13,11 @@ import {
   FolderInput,
   Trash2,
   MoreVertical,
+  Paperclip,
+  ImageIcon,
+  FileText,
+  Send,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -291,13 +296,80 @@ export function Workspace() {
                         AI Studio
                       </span>
                     </div>
-                    <Input
-                      value={instruction}
-                      onChange={(e) => setInstruction(e.target.value)}
-                      placeholder="Specialized instructions for the AI..."
-                      className="h-9 flex-1 border-none bg-muted/40 text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all"
-                    />
+                    
+                    <div className="relative flex-1 flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="ai-attachments"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => e.target.files && ai.addAttachments(e.target.files)}
+                        accept="image/*,application/pdf"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0 text-muted-foreground hover:text-primary"
+                        onClick={() => document.getElementById("ai-attachments")?.click()}
+                      >
+                        <Paperclip className="size-4" />
+                      </Button>
+                      
+                      <Input
+                        value={instruction}
+                        onChange={(e) => setInstruction(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            void ai.chat({ instruction, noteId: ws.selectedId ?? undefined });
+                            setInstruction("");
+                          }
+                        }}
+                        placeholder="Ask AI anything about your note or files..."
+                        className="h-9 flex-1 border-none bg-muted/40 text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all"
+                      />
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={ai.running !== null || !instruction.trim()}
+                        onClick={() => {
+                          void ai.chat({ instruction, noteId: ws.selectedId ?? undefined });
+                          setInstruction("");
+                        }}
+                        className="size-8 shrink-0 text-primary hover:bg-primary/10"
+                      >
+                        {ai.running === "chat" ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Send className="size-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
+
+                  {/* Attachment Previews */}
+                  {ai.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 px-1">
+                      {ai.attachments.map((file, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2 py-1 text-[10px] group">
+                          {file.type.startsWith("image/") ? (
+                            <ImageIcon className="size-3 text-primary/60" />
+                          ) : (
+                            <FileText className="size-3 text-primary/60" />
+                          )}
+                          <span className="max-w-[100px] truncate font-medium">{file.name}</span>
+                          <span className="text-[9px] text-muted-foreground">({(file.size / (1024 * 1024)).toFixed(1)}MB)</span>
+                          <button 
+                            onClick={() => ai.removeAttachment(i)}
+                            className="ml-1 rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-2 border-t border-primary/5 pt-2">
                     {[
@@ -373,9 +445,12 @@ export function Workspace() {
                   const currentSummary = ai.summary || ws.active?.summary;
                   const currentKeyPoints =
                     ai.keyPoints || (ws.active?.keyPoints as string[]);
+                  const currentChatResponse = ai.chatResponse;
+                  
                   const hasData =
                     currentSummary ||
                     (currentKeyPoints && currentKeyPoints.length > 0) ||
+                    currentChatResponse ||
                     ai.error;
                   if (!hasData) return null;
 
@@ -386,6 +461,18 @@ export function Workspace() {
                           {ai.error}
                         </div>
                       )}
+                      
+                      {currentChatResponse && (
+                        <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 text-[13px] leading-relaxed text-foreground/90 shadow-inner">
+                          <div className="mb-2 text-[10px] font-bold uppercase tracking-tighter text-primary flex items-center gap-2">
+                            <Sparkles className="size-3" />
+                            AI Assistant
+                            <div className="h-px flex-1 bg-primary/10" />
+                          </div>
+                          <div className="whitespace-pre-wrap">{currentChatResponse}</div>
+                        </div>
+                      )}
+
                       {currentSummary && (
                         <div className="rounded-xl border border-primary/5 bg-primary/5 p-4 text-[13px] leading-relaxed text-foreground/80 shadow-inner group/summary">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-tighter text-primary/60 flex items-center gap-2">

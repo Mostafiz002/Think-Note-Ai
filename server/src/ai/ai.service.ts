@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AiNoteRequestDto } from './dto/ai-note-request.dto';
-import { GeminiProvider } from './gemini.provider';
+import { GeminiProvider, FileAttachment } from './gemini.provider';
 
 type AiOutput = {
   summary?: string;
@@ -35,6 +35,52 @@ export class AiService {
     }
     this.requestCounts.set(userId, current + 1);
   }
+
+  // ─── New: Freeform AI Chat ───────────────────────────────────────────────
+
+  async chat(
+    instruction: string,
+    userId: number,
+    noteId?: number,
+    files?: Express.Multer.File[],
+  ) {
+    this.checkLimit(userId);
+
+    // Build the prompt with optional note context
+    let prompt = '';
+
+    if (noteId) {
+      const note = await this.getOwnedNote(noteId, userId);
+      const content = this.getContent(note);
+      prompt += `Here is the context of the user's note:\n\nTitle: ${note.title}\nContent:\n${content}\n\n---\n\n`;
+    }
+
+    prompt += `User instruction: ${instruction}`;
+
+    if (files && files.length > 0) {
+      prompt += `\n\nThe user has attached ${files.length} file(s). Please analyze them carefully and incorporate your findings into your response.`;
+    }
+
+    // Convert Multer files to our FileAttachment format
+    const attachments: FileAttachment[] = (files ?? []).map((f) => ({
+      buffer: f.buffer,
+      mimeType: f.mimetype,
+      originalName: f.originalname,
+    }));
+
+    this.logger.log(
+      `AI Chat: user=${userId}, noteId=${noteId ?? 'none'}, files=${attachments.length}, instructionLen=${instruction.length}`,
+    );
+
+    const response = await this.geminiProvider.generateWithAttachments(
+      prompt,
+      attachments,
+    );
+
+    return { response };
+  }
+
+  // ─── Existing: Quick Actions ─────────────────────────────────────────────
 
   async summarizeNote(dto: AiNoteRequestDto, userId: number) {
     this.checkLimit(userId);
@@ -120,6 +166,8 @@ export class AiService {
       keyPoints,
     };
   }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
 
   private getContent(note: {
     markdownContent: string | null;

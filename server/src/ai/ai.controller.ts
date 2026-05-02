@@ -1,14 +1,57 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Request,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AiService } from './ai.service';
 import { AiNoteRequestDto } from './dto/ai-note-request.dto';
+import { AiChatRequestDto } from './dto/ai-chat-request.dto';
 
 @Controller('api/v1/ai')
 @UseGuards(AuthGuard)
 @Throttle({ ai: { limit: 5, ttl: 60000 } })
 export class AiController {
   constructor(private readonly aiService: AiService) {}
+
+  @Post('chat')
+  @UseInterceptors(
+    FilesInterceptor('files', 3, {
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+      fileFilter: (req, file, callback) => {
+        const allowedTypes = [
+          'image/png',
+          'image/jpeg',
+          'image/webp',
+          'image/gif',
+          'application/pdf',
+        ];
+        if (allowedTypes.includes(file.mimetype)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Invalid file type'), false);
+        }
+      },
+    }),
+  )
+  chat(
+    @Body() dto: AiChatRequestDto,
+    @Request() req: { user: { sub: number } },
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    return this.aiService.chat(
+      dto.instruction,
+      req.user.sub,
+      dto.noteId ? Number(dto.noteId) : undefined,
+      files,
+    );
+  }
 
   @Post('summarize')
   summarize(

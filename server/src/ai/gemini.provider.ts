@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+
+export interface FileAttachment {
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
+}
 
 @Injectable()
 export class GeminiProvider {
@@ -15,6 +21,10 @@ export class GeminiProvider {
     this.client = new GoogleGenerativeAI(apiKey);
   }
 
+  /**
+   * Generates a structured JSON response from a text-only prompt.
+   * Used by the 4 existing quick-actions (summarize, rewrite, etc.).
+   */
   async generateJson<T>(prompt: string): Promise<T> {
     const model = this.client.getGenerativeModel({ model: this.model });
 
@@ -28,65 +38,98 @@ export class GeminiProvider {
 
       const raw = result.response.text().trim();
 
-      // Strip any markdown code fences the model may wrap around JSON
       const stripped = raw
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```\s*$/i, '')
         .trim();
 
-      // Gemini can occasionally return multiple concatenated JSON objects.
-      // We extract only the first complete JSON structure as a defensive measure.
       const firstJson = this.extractFirstJson(stripped);
 
       return JSON.parse(firstJson) as T;
     } catch (err: any) {
-      console.error('GEMINI ERROR:', err);
-
-      const status = err?.status as number | undefined;
-      const message: string = err?.message || '';
-
-      // 429 / quota exceeded
-      if (status === 429 || message.includes('429') || message.toLowerCase().includes('quota') || message.toLowerCase().includes('rate limit')) {
-        throw new InternalServerErrorException(
-          'AI rate limit reached. Please try again in a few minutes.',
-        );
-      }
-
-      // 503 / model overloaded
-      if (status === 503 || message.includes('503') || message.toLowerCase().includes('overloaded') || message.toLowerCase().includes('high demand')) {
-        throw new InternalServerErrorException(
-          'AI servers are currently overloaded. Please try again in a few seconds.',
-        );
-      }
-
-      // Safety filter triggered
-      if (message.toLowerCase().includes('safety') || message.toLowerCase().includes('blocked')) {
-        throw new BadRequestException(
-          'The AI declined the request due to safety filters. Please try a different prompt.',
-        );
-      }
-
-      // JSON parse errors — model returned malformed output
-      if (err instanceof SyntaxError) {
-        throw new InternalServerErrorException(
-          'The AI returned an unexpected response. Please try again.',
-        );
-      }
-
-      throw new InternalServerErrorException(
-        message || 'An unexpected AI error occurred.',
-      );
+      this.handleGeminiError(err);
     }
   }
 
   /**
-   * Extracts the first complete JSON object or array from a string.
-   * This guards against cases where the model concatenates multiple JSON blocks.
+   * Generates a freeform text response from a prompt with optional file attachments.
+   * Used by the new AI chat feature for multimodal analysis.
    */
+  async generateWithAttachments(
+    prompt: string,
+    attachments: FileAttachment[] = [],
+  ): Promise<string> {
+    const model = this.client.getGenerativeModel({ model: this.model });
+
+    try {
+      const parts: Part[] = [];
+
+      // Add file attachments as inline data parts
+      for (const file of attachments) {
+        parts.push({
+          inlineData: {
+            mimeType: file.mimeType,
+            data: file.buffer.toString('base64'),
+          },
+        });
+      }
+
+      // Add the text prompt last (so the model sees files first as context)
+      parts.push({ text: prompt });
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts }],
+      });
+
+      return result.response.text().trim();
+    } catch (err: any) {
+      this.handleGeminiError(err);
+    }
+  }
+
+  // ─── Shared error handler ────────────────────────────────────────────────
+
+  private handleGeminiError(err: any): never {
+    console.error('GEMINI ERROR:', err);
+
+    const status = err?.status as number | undefined;
+    const message: string = err?.message || '';
+
+    if (status === 429 || message.includes('429') || message.toLowerCase().includes('quota') || message.toLowerCase().includes('rate limit')) {
+      throw new InternalServerErrorException(
+        'AI rate limit reached. Please try again in a few minutes.',
+      );
+    }
+
+    if (status === 503 || message.includes('503') || message.toLowerCase().includes('overloaded') || message.toLowerCase().includes('high demand')) {
+      throw new InternalServerErrorException(
+        'AI servers are currently overloaded. Please try again in a few seconds.',
+      );
+    }
+
+    if (message.toLowerCase().includes('safety') || message.toLowerCase().includes('blocked')) {
+      throw new BadRequestException(
+        'The AI declined the request due to safety filters. Please try a different prompt.',
+      );
+    }
+
+    if (err instanceof SyntaxError) {
+      throw new InternalServerErrorException(
+        'The AI returned an unexpected response. Please try again.',
+      );
+    }
+
+    throw new InternalServerErrorException(
+      message || 'An unexpected AI error occurred.',
+    );
+  }
+
+  // ─── JSON extraction helper ──────────────────────────────────────────────
+
   private extractFirstJson(text: string): string {
     const start = text.search(/[{\[]/);
-    if (start === -1) return text; // No JSON found — let JSON.parse throw naturally
+    if (start === -1) return text;
 
     const opener = text[start];
     const closer = opener === '{' ? '}' : ']';
@@ -109,6 +152,6 @@ export class GeminiProvider {
       }
     }
 
-    return text.slice(start); // Return from start to end if never closed
+    return text.slice(start);
   }
 }

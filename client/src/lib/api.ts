@@ -118,11 +118,16 @@ export async function apiFetch<T>(
     headers?: Record<string, string>
   }
 ): Promise<T> {
+  const isFormData = init?.body instanceof FormData
+  
   const response = await api.request<T>({
     url: path,
     method: init?.method ?? "GET",
     data: init?.body,
-    headers: init?.headers,
+    headers: {
+      ...init?.headers,
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    },
   })
 
   return response.data
