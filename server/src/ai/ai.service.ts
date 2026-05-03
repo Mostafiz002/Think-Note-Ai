@@ -62,7 +62,7 @@ export class AiService {
   "response": "Your friendly chat response. Confirm any note updates made.",
   "updateNote": {
     "title": "Optional new title if requested",
-    "content": "The COMPLETE updated markdown content of the note. Analyze the existing content and integrate new information naturally. Do not just append the instruction; weave it into the context intelligently."
+    "content": "The COMPLETE updated markdown content of the note. If the user asks to rewrite, summarize, or modify the note in any way, you MUST provide the FULL updated markdown content here. Analyze the existing content and integrate new information naturally. Do not just append the instruction; weave it into the context intelligently."
   }
 }
 If no update is requested, set "updateNote" to null.
@@ -70,7 +70,7 @@ Rules:
 - Analyze attached files (images/PDFs) carefully and use their content to fulfill the request.
 - Return ONLY valid JSON.
 - Do not include markdown fences in the JSON output.
-- If updating content, provide the FULL new content.
+- If updating content (e.g. rewriting, expanding), you MUST provide the FULL new markdown content in updateNote.content.
 - Be an intelligent assistant, not a simple text-append tool.`;
 
     if (files && files.length > 0) {
@@ -94,6 +94,7 @@ Rules:
     }>(prompt, attachments);
 
     // Apply updates if the AI proposed them and we have a noteId
+    let updatedNote: any = null;
     if (result.updateNote && noteId) {
       const { title, content } = result.updateNote;
       const data: any = {};
@@ -101,7 +102,7 @@ Rules:
       if (content) data.markdownContent = content;
 
       if (Object.keys(data).length > 0) {
-        await this.prismaService.note.update({
+        updatedNote = await this.prismaService.note.update({
           where: { id: noteId },
           data,
         });
@@ -109,7 +110,15 @@ Rules:
       }
     }
 
-    return { response: result.response };
+    return {
+      response: result.response,
+      updatedNote: updatedNote
+        ? {
+            title: updatedNote.title,
+            markdownContent: updatedNote.markdownContent,
+          }
+        : null,
+    };
   }
 
   // ─── Existing: Quick Actions ─────────────────────────────────────────────

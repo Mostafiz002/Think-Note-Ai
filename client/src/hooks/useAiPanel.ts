@@ -130,7 +130,10 @@ export function useAiPanel(): AiState {
           formData.append("files", file)
         })
 
-        const data = await apiFetch<{ response: string }>("/api/v1/ai/chat", {
+        const data = await apiFetch<{ 
+          response: string;
+          updatedNote?: { title: string; markdownContent: string } | null;
+        }>("/api/v1/ai/chat", {
           method: "POST",
           body: formData,
         })
@@ -138,8 +141,13 @@ export function useAiPanel(): AiState {
         setChatResponse(data.response)
         setAttachments([]) // Clear attachments on success
 
-        if (args.noteId) {
-          // If the AI updated the note, we need to refresh the UI
+        if (args.noteId && data.updatedNote) {
+          // If the AI updated the note, we apply it directly instead of fetching, avoiding race conditions.
+          ws.setDraftTitle(data.updatedNote.title)
+          ws.setDraftMarkdown(data.updatedNote.markdownContent)
+          await ws.refreshNotes(true)
+        } else if (args.noteId) {
+          // Fallback just in case
           await ws.fetchActiveNote(args.noteId)
           await ws.refreshNotes(true)
         }

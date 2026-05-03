@@ -3,7 +3,7 @@
 **Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
 
 #### Here's a demo video
-[![Think Note AI Video Demo](https://img.youtube.com/vi/L3JD8xFzOKY/maxresdefault.jpg)](https://youtu.be/L3JD8xFzOKY)
+[![Think Note AI Video Demo](https://img.youtube.com/vi/Tt5s8qmTZck/maxresdefault.jpg)](https://youtu.be/Tt5s8qmTZck)
 
 **Think Note AI** is a state-of-the-art, AI-powered note-taking application designed to transform how you organize, synthesize, and interact with your thoughts. Built with a premium aesthetic and powered by Google Gemini AI, it's more than just an editor—it's your second brain.
 
@@ -11,6 +11,7 @@
 
 ## 🚀 Key Features
 
+- **💬 AI Chat & Multimodal Analysis**: Interactive AI chat interface with the ability to upload and analyze PDFs and Images for deeper insights.
 - **🧠 AI Studio**: Integrated AI commands to Summarize, Rewrite, Generate Titles, and Extract Key Insights from your notes using Google Gemini.
 - **📁 Smart Organization**: Nested folders and robust tag management system for managing thousands of notes effortlessly.
 - **⚡ Real-time Workspace**: A premium, distraction-free editor with real-time state management and debounced autosave.
@@ -36,7 +37,7 @@
 
 ### Backend
 - **Framework**: NestJS
-- **Database**: SQLite (via Prisma ORM)
+- **Database**: Serverless SQLite powered by Turso (via Prisma ORM)
 - **AI Integration**: Google Generative AI (Gemini 1.5/2.0)
 - **Caching & Rate Limiting**: Redis
 - **Authentication**: JWT (JSON Web Tokens)

@@ -2,11 +2,13 @@
 
 **Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
 
-[![Think Note AI Video Demo](https://img.youtube.com/vi/L3JD8xFzOKY/maxresdefault.jpg)](https://youtu.be/L3JD8xFzOKY)
+[![Think Note AI Video Demo](https://img.youtube.com/vi/Tt5s8qmTZck/maxresdefault.jpg)](https://youtu.be/Tt5s8qmTZck)
 
 The user interface of Think Note AI is built for speed, aesthetics, and a premium user experience. It leverages modern React patterns and the latest Next.js features to provide a seamless "second brain" experience.
 
 ## ✨ Highlights
+- **AI Chat Interface**: Interactive chat sidebar for real-time AI assistance.
+- **Multimodal Uploads**: Drag-and-drop support for PDFs and Images for AI-powered analysis.
 - **Glassmorphism UI**: Beautiful, translucent layers with vibrant gradients.
 - **Micro-interactions**: Subtle animations using `motion` for every state change.
 - **Granular State**: Optimized Zustand selectors to prevent unnecessary re-renders.
