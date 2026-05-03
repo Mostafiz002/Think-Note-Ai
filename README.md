@@ -2,16 +2,22 @@
 
 **Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
 
+#### Here's a demo video
+[![Think Note AI Video Demo](https://img.youtube.com/vi/L3JD8xFzOKY/maxresdefault.jpg)](https://youtu.be/L3JD8xFzOKY)
+
 **Think Note AI** is a state-of-the-art, AI-powered note-taking application designed to transform how you organize, synthesize, and interact with your thoughts. Built with a premium aesthetic and powered by Google Gemini AI, it's more than just an editor—it's your second brain.
 
 ---
 
 ## 🚀 Key Features
 
-- **🧠 AI Studio**: Integrated AI commands to Summarize, Rewrite, Generate Titles, and Extract Key Insights from your notes.
-- **📁 Smart Organization**: Nested folders and a streamlined workspace for managing thousands of notes effortlessly.
-- **⚡ Real-time Workspace**: A premium, distraction-free editor with real-time state management and autosave.
-- **🔐 Secure Authentication**: OTP-based verification and JWT-secured sessions for maximum privacy.
+- **🧠 AI Studio**: Integrated AI commands to Summarize, Rewrite, Generate Titles, and Extract Key Insights from your notes using Google Gemini.
+- **📁 Smart Organization**: Nested folders and robust tag management system for managing thousands of notes effortlessly.
+- **⚡ Real-time Workspace**: A premium, distraction-free editor with real-time state management and debounced autosave.
+- **🔐 Secure Authentication**: OTP-based verification via email and JWT-secured sessions.
+- **🛡️ Rate Limiting & Caching**: Robust Redis-backed API throttling, caching for optimized performance, and maximum stability.
+- **🔒 Advanced Security**: Secured with Helmet to set HTTP headers, alongside robust validation.
+- **📝 Comprehensive Logging**: Centralized logging system powered by Winston and daily log rotation.
 - **📱 Ultra Responsive**: Fluid design that works perfectly on desktop, tablet, and mobile.
 - **🔍 Global Search**: Lightning-fast search across all your notes and folders.
 
@@ -32,9 +38,11 @@
 - **Framework**: NestJS
 - **Database**: SQLite (via Prisma ORM)
 - **AI Integration**: Google Generative AI (Gemini 1.5/2.0)
+- **Caching & Rate Limiting**: Redis
 - **Authentication**: JWT (JSON Web Tokens)
-- **Email/OTP**: Nodemailer
-- **Security**: Bcrypt Hashing
+- **Email/OTP**: Brevo
+- **Security**: Bcrypt Hashing & Helmet
+- **Logging**: Winston
 
 ---
 
@@ -60,11 +68,17 @@ Create a `.env` file in the `Backend` directory:
 ```env
 # No DATABASE_URL needed for default SQLite setup, 
 # but you can specify one if using a custom path.
-JWT_SECRET="your_secret"
-GEMINI_API_KEY="your_google_ai_key"
-MAIL_HOST="smtp.gmail.com"
-MAIL_USER="your_email@gmail.com"
-MAIL_PASS="your_app_password"
+PORT=
+JWT_SECRET=
+FRONTEND_URL=
+GEMINI_MODEL=
+GEMINI_API_KEY=
+BREVO_API_KEY=
+EMAIL_FROM=your_email@gmail.com
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
+REDIS_URL=
+
 ```
 Initialize the database:
 ```bash
@@ -79,7 +93,7 @@ pnpm install
 ```
 Create a `.env.local` file in the `Frontend` directory:
 ```env
-NEXT_PUBLIC_API_URL="http://localhost:5000"
+BACKEND_URL="http://localhost:5000"
 ```
 Run the development server:
 ```bash

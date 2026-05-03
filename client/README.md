@@ -2,6 +2,8 @@
 
 **Live Site:** [https://think-note-ai.vercel.app](https://think-note-ai.vercel.app)  
 
+[![Think Note AI Video Demo](https://img.youtube.com/vi/L3JD8xFzOKY/maxresdefault.jpg)](https://youtu.be/L3JD8xFzOKY)
+
 The user interface of Think Note AI is built for speed, aesthetics, and a premium user experience. It leverages modern React patterns and the latest Next.js features to provide a seamless "second brain" experience.
 
 ## ✨ Highlights
@@ -10,6 +12,7 @@ The user interface of Think Note AI is built for speed, aesthetics, and a premiu
 - **Granular State**: Optimized Zustand selectors to prevent unnecessary re-renders.
 - **Debounced Autosave**: Intelligent saving logic that preserves your work without overwhelming the API.
 - **Responsive Workspace**: A sidebar-to-full-editor transition logic optimized for all viewports.
+- **OTP Verification Flow**: Seamless UI for email-based OTP signups and resets.
 
 ## 🛠 Tech Stack
 - **Next.js 16 (App Router)**: Utilizing Turbopack for lightning-fast development.

@@ -11,10 +11,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { ThrottlerException } from '@nestjs/throttler';
 
 /**
- * Global exception filter that normalizes every error into a consistent
- * JSON shape and maps Prisma, Throttler, and other known errors to the
- * most appropriate HTTP status code.
- *
+ * Global exception filter
  * Response shape:
  * {
  *   statusCode: number,

@@ -15,8 +15,6 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
 
     // 2. Determine if the current throttler should be applied to this route.
-    // By default, we ONLY apply the 'default' throttler.
-    // 'short' and 'ai' throttlers must be explicitly requested via @Throttle() decorator.
     
     const throttlerName = throttler.name || 'default';
     
